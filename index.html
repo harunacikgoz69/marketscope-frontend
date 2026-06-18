@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarketScope — AI Ürün Analiz Platformu | AgentTR</title>
+<meta name="description" content="Herhangi bir ürün için saniyeler içinde EMEA pazar analizi, rekabet haritası, tedarikçi değerlendirmesi ve finansal projeksiyon.">
+<meta property="og:title" content="MarketScope — AI Ürün Analiz Platformu">
+<meta property="og:description" content="12 AI ajan, A-H bölümleri, Türkiye/Avrupa/Orta Doğu pazar analizi">
+<meta property="og:url" content="https://market.agenttr.org">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231B4FD8'/><text x='16' y='23' font-size='20' font-weight='bold' text-anchor='middle' fill='white'>M</text></svg>">
+<style>
+/* ── RESET & BASE ─────────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0F1F3D;--blue:#1B4FD8;--blue-mid:#3B6EF8;--blue-soft:#EEF3FF;
+  --green:#0E7A4E;--green-soft:#EDFAF4;
+  --orange-c:#D4662A;--orange-soft:#FFF4EC;
+  --red:#B91C1C;--red-soft:#FEF2F2;
+  --text1:#0F1F3D;--text2:#4B5568;--text3:#9CA3AF;
+  --bg:#F7F8FA;--surface:#fff;--border:#E4E7EC;--border2:#CDD2DA;
+  --r:10px;--r-sm:6px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.12);
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text1);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── NAV ──────────────────────────────────────────────────────────────────── */
+.nav{background:var(--surface);border-bottom:1px solid var(--border);height:56px;padding:0 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:var(--shadow)}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo{width:30px;height:30px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px}
+.nav-name{font-size:15px;font-weight:700;color:var(--navy)}
+.nav-sub{font-size:11px;color:var(--text3);margin-left:2px}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-user{display:flex;align-items:center;gap:8px}
+.nav-user-avatar{width:28px;height:28px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.nav-user-name{font-size:13px;font-weight:500;color:var(--text1)}
+.nav-plan-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.badge-free{background:#F3F4F6;color:var(--text3)}
+.badge-starter{background:var(--blue-soft);color:var(--blue)}
+.badge-pro{background:#F0FDF4;color:var(--green)}
+.badge-unlimited{background:#FAF5FF;color:#7C3AED}
+
+/* ── BUTTONS ──────────────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:inherit;text-decoration:none}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover:not(:disabled){background:#1344C4}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover:not(:disabled){background:#095C3A}
+.btn-lg{padding:11px 24px;font-size:14px}
+.btn-sm{padding:5px 12px;font-size:12px}
+
+/* ── MODAL OVERLAY ────────────────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(15,31,61,.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.overlay.hidden{display:none}
+.modal{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-lg);width:100%;max-width:440px;overflow:hidden}
+.modal-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:17px;font-weight:700;color:var(--navy)}
+.modal-close{background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;padding:0;line-height:1}
+.modal-body{padding:20px 24px 24px}
+.auth-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
+.auth-tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
+.auth-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}
+.form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;color:var(--text1);outline:none;transition:border .15s;font-family:inherit}
+.form-input:focus{border-color:var(--blue-mid);box-shadow:0 0 0 3px rgba(59,110,248,.08)}
+.auth-error{background:var(--red-soft);border:1px solid #FCA5A5;border-radius:var(--r-sm);padding:10px 12px;font-size:12px;color:var(--red);margin-bottom:12px}
+.auth-success{background:var(--green-soft);border:1px solid #6EE7B7;border-radius:var(--r-sm);padding:10px 12px;font-size:12px;color:var(--green);margin-bottom:12px}
+.usage-bar-wrap{background:var(--bg);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:16px}
+.usage-bar-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:6px}
+.usage-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.usage-bar-fill{height:100%;background:var(--blue);border-radius:3px;transition:width .5s}
+.usage-bar-fill.warn{background:#EF9F27}
+.usage-bar-fill.full{background:var(--red)}
+
+/* ── MAIN LAYOUT ──────────────────────────────────────────────────────────── */
+.main{max-width:1100px;margin:0 auto;padding:28px 24px}
+
+/* ── PROVIDER BAR ─────────────────────────────────────────────────────────── */
+.provider-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.provider-tabs{display:flex;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:var(--bg)}
+.ptab{padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);transition:.15s;font-family:inherit}
+.ptab.active.claude{background:var(--orange-c);color:#fff}
+.ptab.active.openai{background:#10A37F;color:#fff}
+.ptab:hover:not(.active){background:var(--surface)}
+.model-sel{font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text1);outline:none;cursor:pointer;font-family:inherit}
+.provider-info{font-size:12px;color:var(--text3);margin-left:auto}
+
+/* ── INPUT CARD ───────────────────────────────────────────────────────────── */
+.input-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;box-shadow:var(--shadow);margin-bottom:16px;transition:opacity .2s}
+.card-title{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.card-sub{font-size:12px;color:var(--text2);margin-bottom:20px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg.s2{grid-column:span 2}
+.fg.s3{grid-column:span 3}
+.flabel{font-size:10px;font-weight:600;color:var(--text2);letter-spacing:.05em;text-transform:uppercase}
+.finput,.fselect,.ftextarea{padding:8px 11px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;color:var(--text1);background:var(--surface);outline:none;transition:border .15s;font-family:inherit;width:100%}
+.finput:focus,.fselect:focus,.ftextarea:focus{border-color:var(--blue-mid);box-shadow:0 0 0 3px rgba(59,110,248,.08)}
+.ftextarea{min-height:72px;resize:vertical}
+.price-hint{font-size:10px;color:var(--text3);margin-top:1px}
+.form-actions{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
+.form-hint{font-size:11px;color:var(--text3)}
+
+/* ── FILE UPLOAD ──────────────────────────────────────────────────────────── */
+.file-drop{border:1.5px dashed var(--border2);border-radius:var(--r-sm);padding:12px 14px;background:var(--bg);cursor:pointer;transition:.15s;position:relative;margin-top:7px}
+.file-drop:hover,.file-drop.dragover{border-color:var(--blue-mid);background:var(--blue-soft)}
+.file-drop-inner{display:flex;align-items:center;gap:10px;pointer-events:none}
+.file-drop-icon{font-size:18px;opacity:.5}
+.file-drop-text{font-size:12px;color:var(--text2)}
+.file-drop-text strong{color:var(--blue)}
+.file-drop-text span{font-size:10px;color:var(--text3);display:block;margin-top:1px}
+.file-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.file-list{display:flex;flex-direction:column;gap:4px;margin-top:7px}
+.file-item{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 10px}
+.file-item-name{font-size:12px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-item-size{font-size:11px;color:var(--text3)}
+.file-badge{font-size:10px;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.fb-ok{background:var(--green-soft);color:var(--green)}
+.fb-load{background:var(--blue-soft);color:var(--blue)}
+.fb-err{background:var(--red-soft);color:var(--red)}
+.file-rm{background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:0 2px;line-height:1}
+.file-rm:hover{color:var(--red)}
+
+/* ── PIPELINE ─────────────────────────────────────────────────────────────── */
+.pipeline{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);margin-bottom:16px;display:none}
+.pipeline.show{display:block}
+.pl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.pl-title{font-size:14px;font-weight:700;color:var(--navy)}
+.pl-prog{display:flex;align-items:center;gap:8px}
+.prog-text{font-size:12px;color:var(--text2)}
+.prog-bar{width:140px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:var(--blue);width:0;transition:width .4s;border-radius:2px}
+.phase-block{margin-bottom:12px}
+.phase-lbl{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.phase-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+.pg{display:grid;gap:7px}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g2{grid-template-columns:1fr 1fr}
+.g1{grid-template-columns:1fr}
+.atile{border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;background:var(--bg);position:relative;overflow:hidden}
+.atile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border);border-radius:3px 0 0 3px;transition:.15s}
+.atile.running{background:var(--blue-soft);border-color:#BFCFFD}.atile.running::before{background:var(--blue)}
+.atile.done{background:#fff;border-color:#A7F3D0}.atile.done::before{background:var(--green)}
+.atile.error{background:var(--red-soft);border-color:#FCA5A5}.atile.error::before{background:var(--red)}
+.atop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
+.aname{font-size:12px;font-weight:600;color:var(--navy)}
+.arole{font-size:10px;color:var(--text3);margin-top:1px}
+.astatus{font-size:10px;font-weight:500;display:flex;align-items:center;gap:3px;white-space:nowrap}
+.astatus.idle{color:var(--text3)}.astatus.running{color:var(--blue)}.astatus.done{color:var(--green)}.astatus.error{color:var(--red)}
+.aout{font-size:11px;color:var(--text2);line-height:1.5;white-space:pre-wrap;max-height:80px;overflow:hidden}
+.aout.expanded{max-height:none}
+.aexpand{font-size:10px;color:var(--blue);background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid #BFCFFD;border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── REPORT ───────────────────────────────────────────────────────────────── */
+.report-wrap{display:none}
+.report-wrap.show{display:block}
+.report-actions{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.report-top{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-md);margin-bottom:12px}
+.rhero{background:var(--navy);padding:24px 28px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.rhero-l h1{font-size:19px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:3px}
+.rhero-l p{font-size:12px;color:rgba(255,255,255,.45)}
+.rhero-r{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.vchip{padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700}
+.v-green{background:#ECFDF5;color:#065F46}.v-yellow{background:#FFFBEB;color:#92400E}.v-red{background:#FEF2F2;color:#991B1B}
+.score-box{text-align:right}
+.score-big{font-size:28px;font-weight:700;color:#fff;line-height:1}
+.score-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px}
+.score-track{width:120px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin-top:5px;overflow:hidden}
+.score-fill{height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.sf-green{background:#34D399}.sf-yellow{background:#FCD34D}.sf-red{background:#F87171}
+.rmeta{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)}
+.rmi{padding:11px 16px;border-right:1px solid var(--border)}
+.rmi:last-child{border-right:none}
+.rmi-label{font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.rmi-val{font-size:13px;font-weight:600;color:var(--text1)}
+.sections{display:flex;flex-direction:column;gap:7px}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.shead{display:flex;align-items:center;gap:11px;padding:12px 15px;cursor:pointer;user-select:none;transition:background .1s}
+.shead:hover{background:var(--bg)}
+.sbadge{width:25px;height:25px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.bb{background:var(--blue-soft);color:var(--blue)}.bn{background:#E8EBF5;color:var(--navy)}.bgg{background:var(--green-soft);color:var(--green)}.bo{background:var(--orange-soft);color:#854F0B}
+.shead-text{flex:1}
+.shead-title{font-size:13px;font-weight:600;color:var(--navy)}
+.shead-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.stoggle{font-size:14px;color:var(--text3);transition:transform .2s}
+.scard.open .stoggle{transform:rotate(180deg)}
+.sbody{padding:14px 16px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap;display:none}
+.scard.open .sbody{display:block}
+
+/* ── LANDING (shown when not logged in) ──────────────────────────────────── */
+.landing{padding:60px 24px;text-align:center;max-width:680px;margin:0 auto}
+.landing-badge{display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:12px;font-weight:600;padding:4px 14px;border-radius:20px;margin-bottom:20px}
+.landing h1{font-size:38px;font-weight:800;color:var(--navy);line-height:1.2;margin-bottom:14px}
+.landing h1 span{color:var(--blue)}
+.landing p{font-size:16px;color:var(--text2);line-height:1.7;margin-bottom:32px}
+.landing-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:48px}
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;text-align:left;margin-bottom:48px}
+.feature-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+.feature-icon{font-size:22px;margin-bottom:10px}
+.feature-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.feature-desc{font-size:12px;color:var(--text2);line-height:1.5}
+.plan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:left;margin-bottom:40px}
+.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;position:relative}
+.plan-card.featured{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue)}
+.plan-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.plan-name{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.plan-price{font-size:24px;font-weight:800;color:var(--navy);margin-bottom:2px}
+.plan-price span{font-size:13px;font-weight:400;color:var(--text3)}
+.plan-analyses{font-size:12px;color:var(--text2);margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.plan-features{list-style:none;display:flex;flex-direction:column;gap:5px}
+.plan-features li{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.plan-features li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
+
+/* ── EMPTY & TOAST ────────────────────────────────────────────────────────── */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-icon{font-size:44px;margin-bottom:12px;opacity:.3}
+.empty h3{font-size:15px;color:var(--text2);margin-bottom:5px;font-weight:600}
+.empty p{font-size:13px;max-width:320px;margin:0 auto}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:10px 16px;border-radius:var(--r-sm);font-size:13px;box-shadow:var(--shadow-md);transform:translateY(70px);opacity:0;transition:.25s;z-index:999;max-width:340px}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── RESPONSIVE ───────────────────────────────────────────────────────────── */
+@media(max-width:720px){
+  .form-grid,.g3,.g2,.feature-grid,.plan-grid{grid-template-columns:1fr}
+  .fg.s2,.fg.s3{grid-column:span 1}
+  .rmeta{grid-template-columns:1fr 1fr}
+  .rhero{flex-direction:column}
+  .main{padding:16px}
+  .landing h1{font-size:26px}
+  .nav{padding:0 16px}
+  .provider-bar{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a class="nav-brand" href="/">
+    <div class="nav-logo">M</div>
+    <span class="nav-name">MarketScope</span>
+    <span class="nav-sub">by AgentTR</span>
+  </a>
+  <div class="nav-right" id="navRight">
+    <button class="btn btn-ghost btn-sm" onclick="openAuth('login')">Giriş Yap</button>
+    <button class="btn btn-primary btn-sm" onclick="openAuth('register')">Ücretsiz Başla</button>
+  </div>
+</nav>
+
+<!-- AUTH MODAL -->
+<div class="overlay hidden" id="authOverlay" onclick="closeAuthOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="authModalTitle">Hesap</div>
+      <button class="modal-close" onclick="closeAuth()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Giriş Yap</button>
+        <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Kayıt Ol</button>
+      </div>
+      <div id="authMsg"></div>
+
+      <!-- Login Form -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">E-posta</label>
+          <input class="form-input" type="email" id="loginEmail" placeholder="ornek@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şifre</label>
+          <input class="form-input" type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="doLogin()" id="loginBtn">Giriş Yap</button>
+      </div>
+
+      <!-- Register Form -->
+      <div id="registerForm" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Ad Soyad</label>
+          <input class="form-input" type="text" id="regName" placeholder="Adınız Soyadınız">
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-posta</label>
+          <input class="form-input" type="email" id="regEmail" placeholder="ornek@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şifre</label>
+          <input class="form-input" type="password" id="regPassword" placeholder="En az 8 karakter" onkeydown="if(event.key==='Enter')doRegister()">
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="doRegister()" id="registerBtn">Hesap Oluştur — Ücretsiz</button>
+        <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px">Kayıt olarak <a href="/terms" style="color:var(--blue)">Kullanım Koşulları</a>'nı kabul etmiş olursunuz.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appArea" style="display:none">
+  <div class="main">
+
+    <!-- Provider Bar -->
+    <div class="provider-bar">
+      <div class="provider-tabs">
+        <button class="ptab active claude" id="ptClaude" onclick="setProvider('claude')">Claude</button>
+        <button class="ptab openai" id="ptOpenAI" onclick="setProvider('openai')">OpenAI</button>
+      </div>
+      <select class="model-sel" id="modelSel">
+        <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+        <option value="claude-opus-4-6">claude-opus-4-6</option>
+        <option value="claude-haiku-4-5-20251001">claude-haiku-4-5</option>
+      </select>
+      <div class="provider-info" id="usageBadge"></div>
+    </div>
+
+    <!-- Input Card -->
+    <div class="input-card" id="inputCard">
+      <div class="card-title">Ürün Bilgileri</div>
+      <div class="card-sub">Analiz edilecek ürünü tanımlayın. Dosya ekleyerek rakip katalog ve pazar raporlarını da dahil edebilirsiniz.</div>
+      <div class="form-grid">
+        <div class="fg"><label class="flabel">Ürün Adı *</label><input class="finput" id="pName" placeholder="ör. Bluetooth Mouse"></div>
+        <div class="fg"><label class="flabel">Kategori *</label>
+          <select class="fselect" id="pCat">
+            <option value="">— Seçin —</option>
+            <option>Tüketici Elektroniği</option><option>Ev & Yaşam</option>
+            <option>Sağlık & Kişisel Bakım</option><option>Endüstriyel Ekipman</option>
+            <option>Drone / Savunma / Havacılık</option><option>Medikal Cihaz</option>
+            <option>Yangın & Güvenlik</option><option>HVAC & Bina Otomasyon</option>
+            <option>Tarım & Gıda</option><option>Spor & Outdoor</option><option>Diğer</option>
+          </select>
+        </div>
+        <div class="fg"><label class="flabel">Hedef Pazar *</label>
+          <select class="fselect" id="pMarket">
+            <option>EMEA (Türkiye + Avrupa + Orta Doğu)</option>
+            <option>Türkiye</option><option>Avrupa</option><option>Orta Doğu & Kuzey Afrika</option><option>Global</option>
+          </select>
+        </div>
+        <div class="fg"><label class="flabel">Alış Fiyatı (FOB)</label><input class="finput" id="pBuy" placeholder="ör. $5"><span class="price-hint">Çin OEM FOB fiyatı</span></div>
+        <div class="fg"><label class="flabel">Satış Fiyatı</label><input class="finput" id="pSell" placeholder="ör. $15"><span class="price-hint">Müşteriye satış fiyatı</span></div>
+        <div class="fg"><label class="flabel">İş Modeli</label>
+          <select class="fselect" id="pBiz">
+            <option>Al-Sat (Trading)</option><option>Montaj (Assembly)</option>
+            <option>Private Label / OEM</option><option>Al-Sat + Private Label</option>
+          </select>
+        </div>
+        <div class="fg s3">
+          <label class="flabel" style="display:flex;align-items:center;gap:6px">
+            Ek Bilgi & Bağlam
+            <span id="fileBadge" style="display:none;font-size:10px;background:var(--blue-soft);color:var(--blue);padding:2px 8px;border-radius:10px;font-weight:600"></span>
+          </label>
+          <textarea class="ftextarea" id="pDesc" placeholder="Rakipler, hedef müşteri, özel endişeler, teknik özellikler..."></textarea>
+          <div class="file-drop" id="fileDrop" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <div class="file-drop-inner">
+              <div class="file-drop-icon">📎</div>
+              <div class="file-drop-text">
+                <strong>Dosya ekle</strong> veya sürükle bırak
+                <span>PDF, Word, Excel, TXT, CSV · Maks 10MB</span>
+              </div>
+            </div>
+            <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.txt,.csv,.pptx,.png,.jpg,.jpeg" onchange="handleFiles(this.files)">
+          </div>
+          <div class="file-list" id="fileList"></div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <span class="form-hint" id="formHint">* Zorunlu · 12 ajan · ~3-4 dakika · A-H bölümleri</span>
+        <button class="btn btn-primary btn-lg" id="startBtn" onclick="startAnalysis()">
+          ▶ Analizi Başlat
+        </button>
+      </div>
+    </div>
+
+    <!-- Pipeline -->
+    <div class="pipeline" id="pipelineEl">
+      <div class="pl-head">
+        <div class="pl-title">AI Analiz Akışı — 12 Ajan</div>
+        <div class="pl-prog"><span class="prog-text" id="progText">0 / 12</span><div class="prog-bar"><div class="prog-fill" id="progFill"></div></div></div>
+      </div>
+      <div class="phase-block">
+        <div class="phase-lbl">Faz 1 — Bilgi Toplama (Paralel)</div>
+        <div class="pg g3">
+          <div class="atile" id="a0"><div class="atop"><div><div class="aname">Pazar Araştırma</div><div class="arole">TAM/SAM/SOM · CAGR · Segment</div></div><div class="astatus idle" id="st0">—</div></div><div class="aout" id="out0"></div><button class="aexpand" id="exp0" style="display:none" onclick="xp(0)">daha fazla ↓</button></div>
+          <div class="atile" id="a1"><div class="atop"><div><div class="aname">Rekabet Analizi</div><div class="arole">Rakipler · Fiyat · Engeller</div></div><div class="astatus idle" id="st1">—</div></div><div class="aout" id="out1"></div><button class="aexpand" id="exp1" style="display:none" onclick="xp(1)">daha fazla ↓</button></div>
+          <div class="atile" id="a2"><div class="atop"><div><div class="aname">Tedarik Zinciri</div><div class="arole">OEM · Sertifikasyon</div></div><div class="astatus idle" id="st2">—</div></div><div class="aout" id="out2"></div><button class="aexpand" id="exp2" style="display:none" onclick="xp(2)">daha fazla ↓</button></div>
+          <div class="atile" id="a3"><div class="atop"><div><div class="aname">Mevzuat & Uyumluluk</div><div class="arole">CE · GTİP · Dual-use</div></div><div class="astatus idle" id="st3">—</div></div><div class="aout" id="out3"></div><button class="aexpand" id="exp3" style="display:none" onclick="xp(3)">daha fazla ↓</button></div>
+          <div class="atile" id="a4"><div class="atop"><div><div class="aname">Fiyatlandırma</div><div class="arole">FOB→raf · Marj analizi</div></div><div class="astatus idle" id="st4">—</div></div><div class="aout" id="out4"></div><button class="aexpand" id="exp4" style="display:none" onclick="xp(4)">daha fazla ↓</button></div>
+          <div class="atile" id="a5"><div class="atop"><div><div class="aname">Finansal Projeksiyon</div><div class="arole">5 yıl · ROI · CCC</div></div><div class="astatus idle" id="st5">—</div></div><div class="aout" id="out5"></div><button class="aexpand" id="exp5" style="display:none" onclick="xp(5)">daha fazla ↓</button></div>
+        </div>
+      </div>
+      <div class="phase-block">
+        <div class="phase-lbl">Faz 2 — Tartışma</div>
+        <div class="pg g2">
+          <div class="atile" id="a6"><div class="atop"><div><div class="aname">Savunucu</div><div class="arole">"Portföye al" argümanı</div></div><div class="astatus idle" id="st6">—</div></div><div class="aout" id="out6"></div><button class="aexpand" id="exp6" style="display:none" onclick="xp(6)">daha fazla ↓</button></div>
+          <div class="atile" id="a7"><div class="atop"><div><div class="aname">Eleştirmen</div><div class="arole">"Portföye alma" argümanı</div></div><div class="astatus idle" id="st7">—</div></div><div class="aout" id="out7"></div><button class="aexpand" id="exp7" style="display:none" onclick="xp(7)">daha fazla ↓</button></div>
+        </div>
+      </div>
+      <div class="phase-block">
+        <div class="phase-lbl">Faz 3 — Karar & Sentez</div>
+        <div class="pg g2">
+          <div class="atile" id="a8"><div class="atop"><div><div class="aname">Karar Ajanı (H)</div><div class="arole">Ağırlıklı puan · Final karar</div></div><div class="astatus idle" id="st8">—</div></div><div class="aout" id="out8"></div><button class="aexpand" id="exp8" style="display:none" onclick="xp(8)">daha fazla ↓</button></div>
+          <div class="atile" id="a9"><div class="atop"><div><div class="aname">Risk Analizi</div><div class="arole">Risk matrisi · Mitigasyon</div></div><div class="astatus idle" id="st9">—</div></div><div class="aout" id="out9"></div><button class="aexpand" id="exp9" style="display:none" onclick="xp(9)">daha fazla ↓</button></div>
+        </div>
+        <div class="pg g2" style="margin-top:7px">
+          <div class="atile" id="a10"><div class="atop"><div><div class="aname">Stratejik Uyum (G)</div><div class="arole">SWOT · Şirket uyumu</div></div><div class="astatus idle" id="st10">—</div></div><div class="aout" id="out10"></div><button class="aexpand" id="exp10" style="display:none" onclick="xp(10)">daha fazla ↓</button></div>
+          <div class="atile" id="a11"><div class="atop"><div><div class="aname">Rapor Sentezi</div><div class="arole">A-H bölümleri · YK özeti</div></div><div class="astatus idle" id="st11">—</div></div><div class="aout" id="out11"></div><button class="aexpand" id="exp11" style="display:none" onclick="xp(11)">daha fazla ↓</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report -->
+    <div class="report-wrap" id="reportWrap">
+      <div class="report-actions">
+        <button class="btn btn-ghost btn-sm" onclick="resetAll()">↺ Yeni Analiz</button>
+        <button class="btn btn-green btn-sm" onclick="exportHTML()">⬇ Rapor İndir</button>
+      </div>
+      <div class="report-top">
+        <div class="rhero">
+          <div class="rhero-l"><h1 id="rTitle">Analiz Raporu</h1><p id="rSub"></p></div>
+          <div class="rhero-r"><span class="vchip" id="rVerdict"></span><div class="score-box"><div class="score-big" id="rScore">—</div><div class="score-sub">/ 100 puan</div><div class="score-track"><div class="score-fill" id="rFill"></div></div></div></div>
+        </div>
+        <div class="rmeta">
+          <div class="rmi"><div class="rmi-label">Ürün</div><div class="rmi-val" id="mProd">—</div></div>
+          <div class="rmi"><div class="rmi-label">Hedef Pazar</div><div class="rmi-val" id="mMarket">—</div></div>
+          <div class="rmi"><div class="rmi-label">İş Modeli</div><div class="rmi-val" id="mBiz">—</div></div>
+          <div class="rmi"><div class="rmi-label">Tarih</div><div class="rmi-val" id="mDate">—</div></div>
+        </div>
+      </div>
+      <div class="sections" id="secContainer"></div>
+    </div>
+
+    <div class="empty" id="emptyState">
+      <div class="empty-icon">🔍</div>
+      <h3>Analiz Bekleniyor</h3>
+      <p>Ürün bilgilerini girin ve analizi başlatın.</p>
+    </div>
+  </div>
+</div>
+
+<!-- LANDING (logged out) -->
+<div id="landingArea">
+  <div class="landing">
+    <div class="landing-badge">🚀 AgentTR tarafından</div>
+    <h1>Herhangi Bir Ürün İçin<br><span>Profesyonel Pazar Analizi</span></h1>
+    <p>12 AI ajan saniyeler içinde EMEA pazar büyüklüğü, rekabet haritası, tedarikçi değerlendirmesi ve 5 yıllık finansal projeksiyonu A-H bölümlerinde hazırlar.</p>
+    <div class="landing-ctas">
+      <button class="btn btn-primary btn-lg" onclick="openAuth('register')">Ücretsiz Başla — 3 Analiz</button>
+      <button class="btn btn-ghost btn-lg" onclick="openAuth('login')">Giriş Yap</button>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="feature-icon">🤖</div><div class="feature-title">12 Uzman Ajan</div><div class="feature-desc">Paralel çalışan ajanlar pazar, rekabet, tedarik, mevzuat, fiyat ve finansal analizi aynı anda yürütür.</div></div>
+      <div class="feature-card"><div class="feature-icon">🌍</div><div class="feature-title">EMEA Odaklı</div><div class="feature-desc">Türkiye, Avrupa ve Orta Doğu pazarları için ayrı ayrı TAM/SAM/SOM ve CAGR analizi.</div></div>
+      <div class="feature-card"><div class="feature-icon">📎</div><div class="feature-title">Dosya Yükleme</div><div class="feature-desc">Rakip katalog, pazar raporu veya teknik dokümanlarınızı yükleyin — ajan verileri direkt kullanır.</div></div>
+      <div class="feature-card"><div class="feature-icon">⚖️</div><div class="feature-title">Tartışmalı Karar</div><div class="feature-desc">Savunucu ve Eleştirmen ajan birbiriyle tartışır, Karar ajanı ağırlıklı puan verir.</div></div>
+      <div class="feature-card"><div class="feature-icon">🔄</div><div class="feature-title">Claude + GPT-4o</div><div class="feature-desc">Anthropic Claude veya OpenAI GPT-4o ile analiz yapın. Model seçimi sizde.</div></div>
+      <div class="feature-card"><div class="feature-icon">📄</div><div class="feature-title">Rapor Export</div><div class="feature-desc">A'dan H'ye tüm bölümleri içeren profesyonel HTML raporu indirin — Word'de açılır.</div></div>
+    </div>
+    <h2 style="font-size:20px;font-weight:700;color:var(--navy);margin-bottom:20px">Planlar</h2>
+    <div class="plan-grid" id="planGrid">
+      <!-- filled by JS -->
+    </div>
+    <p style="font-size:12px;color:var(--text3)">Ödeme entegrasyonu yakında · Şu an tüm planlar ücretsiz erişimde</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const API = 'https://marketscope-api-production.up.railway.app'; // Railway URL — deploy sonrası güncellenecek
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+const TOTAL = 12;
+const SYS = `Sen deneyimli bir EMEA bölgesi ürün ticareti ve pazar analisti uzmanısın. Yanıtlarını Türkçe ver. Gerçek piyasa verisi olmadığında "tahminen", "piyasa verilerine göre" ifadelerini kullan. Somut, sayısal, madde madde yaz.`;
+
+let currentProvider = 'claude';
+let results = Array(TOTAL).fill('');
+let fullTexts = Array(TOTAL).fill('');
+let uploadedFiles = [];
+let sectionTexts = {};
+let curInfo = {};
+let doneN = 0;
+let running = false;
+let authToken = localStorage.getItem('ms_token');
+let currentUser = null;
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  renderPlans();
+  if (authToken) {
+    await loadUser();
+  }
+  if (currentUser) {
+    showApp();
+  } else {
+    showLanding();
+  }
+});
+
+async function loadUser() {
+  try {
+    const r = await apiFetch('/auth/me');
+    if (r.ok) {
+      currentUser = await r.json();
+      renderNav();
+      renderUsageBadge();
+    } else {
+      authToken = null;
+      localStorage.removeItem('ms_token');
+    }
+  } catch(e) {
+    authToken = null;
+    localStorage.removeItem('ms_token');
+  }
+}
+
+function showApp() {
+  document.getElementById('landingArea').style.display = 'none';
+  document.getElementById('appArea').style.display = 'block';
+}
+function showLanding() {
+  document.getElementById('landingArea').style.display = 'block';
+  document.getElementById('appArea').style.display = 'none';
+}
+
+function renderNav() {
+  if (!currentUser) return;
+  const nav = document.getElementById('navRight');
+  const planClass = `badge-${currentUser.plan}`;
+  nav.innerHTML = `
+    <div class="nav-user">
+      <div class="nav-user-avatar">${(currentUser.name||'U')[0].toUpperCase()}</div>
+      <span class="nav-user-name">${currentUser.name||currentUser.email}</span>
+      <span class="nav-plan-badge ${planClass}">${currentUser.plan.toUpperCase()}</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()">Çıkış</button>`;
+}
+
+function renderUsageBadge() {
+  if (!currentUser) return;
+  const used = currentUser.analyses_used;
+  const limit = currentUser.analyses_limit;
+  const rem = currentUser.analyses_remaining;
+  document.getElementById('usageBadge').textContent = `${used}/${limit} analiz kullanıldı · ${rem} kalan`;
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function openAuth(tab='login') {
+  document.getElementById('authOverlay').classList.remove('hidden');
+  switchAuthTab(tab);
+}
+function closeAuth() { document.getElementById('authOverlay').classList.add('hidden'); clearAuthMsg(); }
+function closeAuthOnOverlay(e) { if(e.target===document.getElementById('authOverlay')) closeAuth(); }
+function switchAuthTab(tab) {
+  document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+  document.getElementById('registerForm').style.display = tab==='register'?'block':'none';
+  document.getElementById('tabLogin').className = 'auth-tab'+(tab==='login'?' active':'');
+  document.getElementById('tabRegister').className = 'auth-tab'+(tab==='register'?' active':'');
+  clearAuthMsg();
+}
+function showAuthMsg(msg, type='error') {
+  document.getElementById('authMsg').innerHTML = `<div class="auth-${type}">${msg}</div>`;
+}
+function clearAuthMsg() { document.getElementById('authMsg').innerHTML = ''; }
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+  if(!email||!pass){ showAuthMsg('E-posta ve şifre gerekli'); return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled=true; btn.textContent='Giriş yapılıyor...';
+  try {
+    const r = await apiFetch('/auth/login', 'POST', {email, password:pass});
+    const d = await r.json();
+    if(!r.ok){ showAuthMsg(d.detail||'Giriş başarısız'); return; }
+    authToken = d.access_token;
+    localStorage.setItem('ms_token', authToken);
+    currentUser = {
+      id: d.user.id, email: d.user.email, name: d.user.name,
+      plan:'free', analyses_used:0, analyses_limit:3, analyses_remaining:3
+    };
+    await loadUser();
+    closeAuth();
+    showApp();
+    toast('✓ Hoş geldiniz!');
+  } catch(e){ showAuthMsg('Bağlantı hatası: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='Giriş Yap'; }
+}
+
+async function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPassword').value;
+  if(!name||!email||!pass){ showAuthMsg('Tüm alanları doldurun'); return; }
+  if(pass.length<8){ showAuthMsg('Şifre en az 8 karakter olmalı'); return; }
+  const btn = document.getElementById('registerBtn');
+  btn.disabled=true; btn.textContent='Hesap oluşturuluyor...';
+  try {
+    const r = await apiFetch('/auth/register', 'POST', {email, password:pass, name});
+    const d = await r.json();
+    if(!r.ok){ showAuthMsg(d.detail||'Kayıt başarısız'); return; }
+    showAuthMsg('✓ Hesabınız oluşturuldu! E-postanızı doğrulayın, ardından giriş yapın.', 'success');
+    setTimeout(()=>switchAuthTab('login'), 3000);
+  } catch(e){ showAuthMsg('Bağlantı hatası: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='Hesap Oluştur — Ücretsiz'; }
+}
+
+async function doLogout() {
+  authToken=null; currentUser=null;
+  localStorage.removeItem('ms_token');
+  document.getElementById('navRight').innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="openAuth('login')">Giriş Yap</button>
+    <button class="btn btn-primary btn-sm" onclick="openAuth('register')">Ücretsiz Başla</button>`;
+  showLanding();
+  resetAll();
+}
+
+// ── API FETCH ─────────────────────────────────────────────────────────────────
+async function apiFetch(path, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: {'Content-Type':'application/json'},
+  };
+  if(authToken) opts.headers['Authorization'] = `Bearer ${authToken}`;
+  if(body) opts.body = JSON.stringify(body);
+  return fetch(API+path, opts);
+}
+
+// ── PROVIDER / MODEL ──────────────────────────────────────────────────────────
+const CLAUDE_MODELS = [
+  {v:'claude-sonnet-4-6',l:'claude-sonnet-4-6'},
+  {v:'claude-opus-4-6',l:'claude-opus-4-6'},
+  {v:'claude-haiku-4-5-20251001',l:'claude-haiku-4-5'},
+];
+const OPENAI_MODELS = [
+  {v:'gpt-4o',l:'gpt-4o'},{v:'gpt-4o-mini',l:'gpt-4o-mini'},
+  {v:'gpt-4-turbo',l:'gpt-4-turbo'},{v:'o1-mini',l:'o1-mini'},
+];
+function setProvider(p) {
+  currentProvider=p;
+  document.getElementById('ptClaude').className='ptab'+(p==='claude'?' active claude':'');
+  document.getElementById('ptOpenAI').className='ptab'+(p==='openai'?' active openai':'');
+  const sel=document.getElementById('modelSel');
+  const models=p==='claude'?CLAUDE_MODELS:OPENAI_MODELS;
+  sel.innerHTML=models.map(m=>`<option value="${m.v}">${m.l}</option>`).join('');
+}
+
+// ── FILE UPLOAD ───────────────────────────────────────────────────────────────
+const FILE_ICONS={pdf:'📄',docx:'📝',doc:'📝',xlsx:'📊',xls:'📊',csv:'📊',txt:'📃',pptx:'📊',png:'🖼️',jpg:'🖼️',jpeg:'🖼️'};
+function getExt(n){return n.split('.').pop().toLowerCase();}
+function getIcon(n){return FILE_ICONS[getExt(n)]||'📎';}
+function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';}
+function onDragOver(e){e.preventDefault();document.getElementById('fileDrop').classList.add('dragover');}
+function onDragLeave(){document.getElementById('fileDrop').classList.remove('dragover');}
+function onDrop(e){e.preventDefault();document.getElementById('fileDrop').classList.remove('dragover');handleFiles(e.dataTransfer.files);}
+function handleFiles(files){
+  Array.from(files).forEach(file=>{
+    if(file.size>10*1024*1024){toast('⚠ '+file.name+' 10MB sınırını aşıyor');return;}
+    if(uploadedFiles.find(f=>f.name===file.name&&f.size===file.size))return;
+    const idx=uploadedFiles.length;
+    uploadedFiles.push({name:file.name,size:file.size,content:null,error:null,isImage:false});
+    renderFileList();
+    readFile(file,idx);
+  });
+}
+function readFile(file,idx){
+  const ext=getExt(file.name);
+  const isImg=['png','jpg','jpeg'].includes(ext);
+  const isTxt=['txt','csv'].includes(ext);
+  if(isTxt){
+    const r=new FileReader();
+    r.onload=e=>{uploadedFiles[idx].content=e.target.result;renderFileList();};
+    r.readAsText(file,'UTF-8');
+  } else {
+    const r=new FileReader();
+    r.onload=async e=>{
+      const b64=e.target.result.split(',')[1];
+      uploadedFiles[idx].isImage=isImg;
+      uploadedFiles[idx].mimeType=file.type;
+      if(isImg){uploadedFiles[idx].content=b64;renderFileList();return;}
+      // Send to backend for extraction
+      try{
+        const resp=await apiFetch('/extract','POST',{filename:file.name,b64,mime_type:file.type});
+        if(resp.ok){
+          const d=await resp.json();
+          uploadedFiles[idx].content=d.text;
+          uploadedFiles[idx].chars=d.chars;
+        } else {
+          uploadedFiles[idx].content=null;
+          uploadedFiles[idx].fallbackB64=b64;
+          uploadedFiles[idx].error=ext==='pdf'?null:'Metin çıkarılamadı';
+        }
+      } catch {
+        uploadedFiles[idx].fallbackB64=b64;
+      }
+      renderFileList();
+    };
+    r.readAsDataURL(file);
+  }
+}
+function removeFile(i){uploadedFiles.splice(i,1);renderFileList();}
+function renderFileList(){
+  const list=document.getElementById('fileList');
+  const badge=document.getElementById('fileBadge');
+  if(!uploadedFiles.length){list.innerHTML='';badge.style.display='none';return;}
+  badge.textContent=uploadedFiles.length+' dosya';badge.style.display='inline';
+  list.innerHTML=uploadedFiles.map((f,i)=>{
+    const loading=f.content===null&&!f.error&&!f.fallbackB64;
+    const status=f.error?`<span class="file-badge fb-err">⚠ ${f.error}</span>`:
+      loading?`<span class="file-badge fb-load">⏳</span>`:
+      f.chars?`<span class="file-badge fb-ok">✓ ${(f.chars/1000).toFixed(0)}K kr</span>`:
+      f.isImage?`<span class="file-badge fb-ok">✓ Görsel</span>`:
+      `<span class="file-badge fb-ok">✓ Hazır</span>`;
+    return `<div class="file-item"><span>${getIcon(f.name)}</span><span class="file-item-name" title="${f.name}">${f.name}</span><span class="file-item-size">${fmtSize(f.size)}</span>${status}<button class="file-rm" onclick="removeFile(${i})">×</button></div>`;
+  }).join('');
+}
+function buildFilePayload(){
+  return uploadedFiles.filter(f=>f.content&&!f.isImage).map(f=>({name:f.name,text:f.content.slice(0,8000)}));
+}
+
+// ── PIPELINE UI ───────────────────────────────────────────────────────────────
+function setTile(i,state,text){
+  const el=document.getElementById('a'+i),st=document.getElementById('st'+i),out=document.getElementById('out'+i),exp=document.getElementById('exp'+i);
+  el.className='atile '+state;st.className='astatus '+state;
+  if(state==='running')st.innerHTML='<span class="spin"></span> Çalışıyor';
+  else if(state==='done')st.textContent='✓ Tamam';
+  else if(state==='error')st.textContent='✗ Hata';
+  else st.textContent='—';
+  if(text){fullTexts[i]=text;const p=text.length>200?text.slice(0,200)+'…':text;out.textContent=p;if(text.length>200)exp.style.display='inline';}
+}
+function xp(i){
+  const out=document.getElementById('out'+i),btn=document.getElementById('exp'+i);
+  if(out.classList.contains('expanded')){out.textContent=fullTexts[i].slice(0,200)+'…';out.classList.remove('expanded');btn.textContent='daha fazla ↓';}
+  else{out.textContent=fullTexts[i];out.classList.add('expanded');btn.textContent='daralt ↑';}
+}
+function updProg(n){doneN=n;document.getElementById('progText').textContent=n+' / '+TOTAL;document.getElementById('progFill').style.width=Math.round(n/TOTAL*100)+'%';}
+function toast(msg,d=2800){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d);}
+
+// ── PROMPTS ───────────────────────────────────────────────────────────────────
+function buildPrompts(info){
+  const fileCtx=uploadedFiles.filter(f=>f.content&&!f.isImage).map((f,i)=>`\n[Dosya ${i+1}: ${f.name}]\n${f.content.slice(0,8000)}`).join('\n');
+  const base=`Ürün: ${info.name}\nKategori: ${info.cat}\nHedef Pazar: ${info.market}\nAlış: ${info.buy||'bilinmiyor'} | Satış: ${info.sell||'bilinmiyor'}\nİş Modeli: ${info.biz}\nEk Bilgi: ${info.desc||'—'}${fileCtx?'\n\n=== YÜKLENEN DOSYALAR ===\n'+fileCtx+'\n=== DOSYA SONU ===':''}`;
+  const R=results;
+  return [
+    `${SYS}\n\nGörev: BÖLÜM A — PAZAR ANALİZİ\n\n${base}\n\n1. Türkiye/Avrupa/Orta Doğu: pazar büyüklüğü ($M) ve CAGR\n2. TAM→SAM→SOM (sayısal)\n3. Segmentasyon (3 segment, büyüklük+alıcı)\n4. Büyüme katalizörleri (4 madde)\n5. Baskılar ve riskler (3 madde)\n6. Hedef müşteri profili\nSon satır: PAZAR SKORU: X/5`,
+    `${SYS}\n\nGörev: BÖLÜM B — REKABET ANALİZİ\n\n${base}\n\n1. Ana rakipler (5+): isim·menşe·fiyat·güçlü/zayıf\n2. Konumlandırma haritası: Premium/Mid/Budget\n3. Giriş engelleri: marka·sertifika·kanal\n4. Farklılaşma matrisi\n5. Segment boşluğu\nSon satır: REKABET SKORU: X/5`,
+    `${SYS}\n\nGörev: BÖLÜM C — TEDARİKÇİ ANALİZİ\n\n${base}\n\n1. OEM tedarikçiler (3+): şehir·FOB·MOQ·güçlü/zayıf\n2. Sertifikasyon: CE/UKCA/ilgili\n3. Lead time ve stok\n4. Exclusivity/Private Label\n5. Tedarik zinciri riskleri\n6. Önerilen tedarikçi\nSon satır: TEDARİK SKORU: X/5`,
+    `${SYS}\n\nGörev: BÖLÜM F — UYUMLULUK & MEVZUAT\n\n${base}\n\n1. GTİP + gümrük + TAREKS\n2. Türkiye özel izinler\n3. AB direktifleri (CE, RoHS, RED vb.)\n4. Dual-use riski\n5. Sertifikasyon süresi ve maliyet\nSon satır: UYUMLULUK SKORU: X/5`,
+    `${SYS}\n\nGörev: BÖLÜM D — FİYATLANDIRMA\n\n${base}\n\n1. Birim maliyet: FOB·navlun·gümrük·depo·sertifika·ambalaj→TOPLAM COGS\n2. Kanal marjları: TR B2B·TR distribütör·Avrupa·Orta Doğu·blended\n3. Marj eşiği değerlendirmesi (%20 altı=tehlike)\n4. Fiyat stratejisi\nSon satır: MARJ SKORU: X/5`,
+    `${SYS}\n\nGörev: BÖLÜM E — FİNANSAL PROJEKSİYON\n\nPazar: ${R[0]||'—'}\nFiyat: ${R[4]||'—'}\n\n${base}\n\n1. 5Y senaryo (kötümser/baz/iyimser) — adet + $M\n2. Baz senaryo gelir tablosu 2026-2030: ciro·COGS·brüt kâr·opex·net kâr\n3. Yatırım gereksinimleri ve ROI\n4. Başabaş noktası\n5. Cash Conversion Cycle\nSon satır: FİNANSAL SKOR: X/5`,
+    `${SYS}\n\nGörev: SAVUNUCU\n\nPAZAR: ${R[0]}\nREKABET: ${R[1]}\nTEDARİK: ${R[2]}\nMEVZUAT: ${R[3]}\nFİYAT: ${R[4]}\nFİNANSAL: ${R[5]}\n\n${base}\n\nPortföye ALINMASI için en az 6 güçlü argüman. Rakipler ve eleştirmenlerin olası itirazlarını önceden yanıtla.`,
+    `${SYS}\n\nGörev: ELEŞTİRMEN\n\nSavunucu: ${R[6]}\nPAZAR: ${R[0]} | REK: ${R[1]} | TED: ${R[2]} | MEV: ${R[3]} | FİY: ${R[4]} | FİN: ${R[5]}\n\n${base}\n\nSavunucunun her argümanını çürüt. Gizli maliyetleri, iyimser varsayımları ortaya koy. Alternatif öneri yap.`,
+    `${SYS}\n\nGörev: BÖLÜM H — AĞIRLIKLI PUANLAMA & KARAR\n\nSAVUNUCU: ${R[6]}\nELEŞTİRMEN: ${R[7]}\nTüm veri: ${R[0].slice(0,300)}|${R[1].slice(0,200)}|${R[4].slice(0,200)}|${R[5].slice(0,200)}\n\n8 kriteri 1-5 puan (ağırlıklar: Pazar%20·Marj%20·Rekabet%15·Tedarik%15·Sertifika%10·Strateji%10·Operasyonel%5·ROI%5):\n\n| Kriter | Ağırlık | Puan | Ağırlıklı |\n|---|---|---|---|\n[her kriter için satır]\n| **TOPLAM** | **%100** | — | **XX/100** |\n\nTOPLAM PUAN: XX/100\nKARAR: [Onayli/Koşullu Onay/Ertelendi/Reddedildi]\nGEREKÇE: [2 cümle]\nAKSİYON PLANI:\n1. [aksiyon — sorumlu — süre]\n2. [aksiyon — sorumlu — süre]\n3. [aksiyon — sorumlu — süre]\n4. [aksiyon — sorumlu — süre]`,
+    `${SYS}\n\nGörev: RİSK MATRİSİ\n\nKarar: ${R[8]}\nSav: ${R[6].slice(0,200)} | Eleş: ${R[7].slice(0,200)}\n\nEn az 7 risk. Her biri: başlık · kategori · olasılık(Y/O/D) · etki(K/Ö/D) · mitigasyon\nSon satır: BİRLEŞİK RİSK: [Yüksek/Orta/Düşük] | Öncelikli aksiyon: [1 cümle]`,
+    `${SYS}\n\nGörev: BÖLÜM G — STRATEJİK UYUM\n\nPAZAR: ${R[0]}\nREKABET: ${R[1]}\nFİYAT: ${R[4]}\nFİNANSAL: ${R[5]}\n\n${base}\n\n1. SWOT (4 kutu, 3+ madde her biri)\n2. Portföy uyumu ve sinerji\n3. EMEA ölçeklenme potansiyeli\n4. Private Label / marka yatırımı — ne zaman?\n5. Stratejik tavsiye\nSon satır: STRATEJİK UYUM SKORU: X/5`,
+    `${SYS}\n\nGörev: NİHAİ RAPOR — A-H bölümlerini sentezle (özet format, bölüm başlıklarını AYNEN kullan):\n\n## BÖLÜM A — PAZAR ANALİZİ\n[3-4 cümle özet]\n\n## BÖLÜM B — REKABET ANALİZİ\n[3-4 cümle]\n\n## BÖLÜM C — TEDARİKÇİ ANALİZİ\n[3-4 cümle]\n\n## BÖLÜM D — FİYATLANDIRMA\n[3-4 cümle]\n\n## BÖLÜM E — FİNANSAL PROJEKSİYON\n[3-4 cümle]\n\n## BÖLÜM F — UYUMLULUK\n[3-4 cümle]\n\n## BÖLÜM G — STRATEJİK UYUM\n[3-4 cümle]\n\n## BÖLÜM H — PUANLAMA & KARAR\n${R[8]}\n\nKaynak: A=${R[0].slice(0,200)} B=${R[1].slice(0,200)} C=${R[2].slice(0,150)} D=${R[4].slice(0,200)} E=${R[5].slice(0,200)} F=${R[3].slice(0,150)} G=${R[10].slice(0,200)}`
+  ];
+}
+
+// ── MAIN ANALYSIS FLOW ────────────────────────────────────────────────────────
+async function startAnalysis(){
+  if(!currentUser){openAuth('login');return;}
+  const name=document.getElementById('pName').value.trim();
+  if(!name){toast('⚠ Ürün adı zorunlu');return;}
+  if(!document.getElementById('pCat').value){toast('⚠ Kategori seçin');return;}
+  if(running)return;
+  running=true;results=Array(TOTAL).fill('');fullTexts=Array(TOTAL).fill('');doneN=0;sectionTexts={};
+
+  curInfo={
+    name,cat:document.getElementById('pCat').value,
+    market:document.getElementById('pMarket').value,
+    buy:document.getElementById('pBuy').value.trim(),
+    sell:document.getElementById('pSell').value.trim(),
+    biz:document.getElementById('pBiz').value,
+    desc:document.getElementById('pDesc').value.trim()
+  };
+
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('reportWrap').classList.remove('show');
+  document.getElementById('pipelineEl').classList.add('show');
+  document.getElementById('inputCard').style.cssText='opacity:.4;pointer-events:none';
+  for(let i=0;i<TOTAL;i++) setTile(i,'idle','');
+  updProg(0);
+
+  const prompts=buildPrompts(curInfo);
+  const filePayload=buildFilePayload();
+
+  async function runAgent(i,prompt){
+    setTile(i,'running');
+    try{
+      const r=await apiFetch('/analyze','POST',{
+        provider:currentProvider,
+        model:document.getElementById('modelSel').value,
+        prompt:SYS+'\n\n'+prompt,
+        agent_index:i,
+        file_contents:i===0?filePayload:[]
+      });
+      if(!r.ok){
+        const e=await r.json().catch(()=>({}));
+        if(r.status===429) throw new Error('Aylık analiz limitinize ulaştınız. Planınızı yükseltin.');
+        throw new Error(e.detail||'HTTP '+r.status);
+      }
+      const d=await r.json();
+      results[i]=d.text;setTile(i,'done',d.text);return d.text;
+    }catch(e){setTile(i,'error',e.message);results[i]='[hata]';throw e;}
+  }
+
+  try{
+    await Promise.all([0,1,2,3,4,5].map(async i=>{await runAgent(i,prompts[i]);updProg(++doneN);}));
+    const p2=buildPrompts(curInfo);
+    await runAgent(6,p2[6]);updProg(++doneN);
+    const p3=buildPrompts(curInfo);
+    await runAgent(7,p3[7]);updProg(++doneN);
+    const p4=buildPrompts(curInfo);
+    await runAgent(8,p4[8]);updProg(++doneN);
+    const p5=buildPrompts(curInfo);
+    await runAgent(9,p5[9]);updProg(++doneN);
+    const p6=buildPrompts(curInfo);
+    await runAgent(10,p6[10]);updProg(++doneN);
+    const p7=buildPrompts(curInfo);
+    await runAgent(11,p7[11]);updProg(12);
+    buildReport();
+    // Refresh user usage
+    await loadUser();
+    renderUsageBadge();
+    toast('✓ Analiz tamamlandı');
+  }catch(e){toast('Hata: '+e.message,5000);}
+
+  running=false;
+  document.getElementById('inputCard').style.cssText='';
+}
+
+// ── REPORT ────────────────────────────────────────────────────────────────────
+function parseVerdict(t){
+  const u=(t||'').toUpperCase();
+  if(u.includes('REDDEDİLDİ')||u.includes('REDDEDILDI'))return{label:'❌ Reddedildi',cls:'v-red',col:'red'};
+  if(u.includes('ERTELENDİ')||u.includes('ERTELENDI'))return{label:'⏸ Ertelendi',cls:'v-yellow',col:'yellow'};
+  if(u.includes('KOŞULLU')||u.includes('KOSULLU'))return{label:'⚡ Koşullu Onay',cls:'v-yellow',col:'yellow'};
+  if(u.includes('ONAYLI')||u.includes('ONAY'))return{label:'✅ Onayli',cls:'v-green',col:'green'};
+  return{label:'Değerlendirildi',cls:'v-yellow',col:'yellow'};
+}
+function parseScore(t){
+  if(!t)return null;
+  let m=t.match(/TOPLAM PUAN[^\d]*(\d{2,3})/i);if(m)return parseInt(m[1]);
+  m=t.match(/\*\*TOPLAM\*\*[^\d]*(\d{2,3})\s*\/\s*100/i);if(m)return parseInt(m[1]);
+  m=t.match(/(\d{2,3})\s*\/\s*100/);if(m)return parseInt(m[1]);
+  return null;
+}
+function extractSection(report,letter){
+  const re=new RegExp(`##\\s*BÖLÜM\\s*${letter}[^\\n]*\\n([\\s\\S]*?)(?=##\\s*BÖLÜM|$)`,'i');
+  const m=report.match(re);return m?m[1].trim():'';
+}
+const SECS=[
+  {id:'A',title:'Pazar Analizi',sub:'TAM/SAM/SOM · CAGR · Segmentasyon',bc:'bb'},
+  {id:'B',title:'Rekabet Analizi',sub:'Rakip haritası · Giriş engelleri · Farklılaşma',bc:'bb'},
+  {id:'C',title:'Tedarikçi Analizi',sub:'OEM karşılaştırma · Sertifika · Risk',bc:'bn'},
+  {id:'D',title:'Fiyatlandırma',sub:'FOB→raf · Kanal marjları',bc:'bn'},
+  {id:'E',title:'Finansal Projeksiyon',sub:'5 yıl · ROI · Cash cycle',bc:'bgg'},
+  {id:'F',title:'Uyumluluk',sub:'CE/UKCA · GTİP · İthalat',bc:'bo'},
+  {id:'G',title:'Stratejik Uyum',sub:'SWOT · Sinerji · Fırsat',bc:'bb'},
+  {id:'H',title:'Puanlama & Karar',sub:'8 kriter · Ağırlıklı skor · Aksiyon planı',bc:'bn'},
+];
+function buildReport(){
+  const report=results[11]||'';const decision=results[8]||'';
+  const v=parseVerdict(report+' '+decision);
+  const score=parseScore(decision)||parseScore(report);
+  document.getElementById('rTitle').textContent=curInfo.name+' — Analiz Raporu';
+  const prov=currentProvider==='claude'?'Claude':'OpenAI';
+  document.getElementById('rSub').textContent=`MarketScope AI · ${prov} · ${new Date().toLocaleString('tr-TR')}`;
+  const vc=document.getElementById('rVerdict');vc.textContent=v.label;vc.className='vchip '+v.cls;
+  if(score){document.getElementById('rScore').textContent=score;const f=document.getElementById('rFill');f.className='score-fill sf-'+v.col;setTimeout(()=>f.style.width=score+'%',200);}
+  document.getElementById('mProd').textContent=curInfo.name;
+  document.getElementById('mMarket').textContent=curInfo.market;
+  document.getElementById('mBiz').textContent=curInfo.biz;
+  document.getElementById('mDate').textContent=new Date().toLocaleDateString('tr-TR');
+  SECS.forEach(s=>{sectionTexts[s.id]=extractSection(report,s.id);});
+  if(!sectionTexts['A'])sectionTexts['A']=results[0];
+  if(!sectionTexts['B'])sectionTexts['B']=results[1];
+  if(!sectionTexts['C'])sectionTexts['C']=results[2];
+  if(!sectionTexts['D'])sectionTexts['D']=results[4];
+  if(!sectionTexts['E'])sectionTexts['E']=results[5];
+  if(!sectionTexts['F'])sectionTexts['F']=results[3];
+  if(!sectionTexts['G'])sectionTexts['G']=results[10];
+  if(!sectionTexts['H'])sectionTexts['H']=results[8];
+  const container=document.getElementById('secContainer');container.innerHTML='';
+  SECS.forEach((s,idx)=>{
+    const card=document.createElement('div');card.className='scard'+(idx===7?' open':'');
+    card.innerHTML=`<div class="shead" onclick="this.parentElement.classList.toggle('open')"><div class="sbadge ${s.bc}">${s.id}</div><div class="shead-text"><div class="shead-title">${s.title}</div><div class="shead-sub">${s.sub}</div></div><div class="stoggle">▾</div></div><div class="sbody">${sectionTexts[s.id]||'(İçerik hazırlanamadı)'}</div>`;
+    container.appendChild(card);
+  });
+  document.getElementById('reportWrap').classList.add('show');
+  document.getElementById('reportWrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function resetAll(){
+  uploadedFiles=[];renderFileList();results=Array(TOTAL).fill('');fullTexts=Array(TOTAL).fill('');
+  document.getElementById('reportWrap').classList.remove('show');
+  document.getElementById('pipelineEl').classList.remove('show');
+  document.getElementById('emptyState').style.display='block';
+  document.getElementById('inputCard').style.cssText='';
+  for(let i=0;i<TOTAL;i++) setTile(i,'idle','');
+  updProg(0);window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── HTML EXPORT ───────────────────────────────────────────────────────────────
+function exportHTML(){
+  const v=parseVerdict(results[11]+results[8]);
+  const score=parseScore(results[8])||parseScore(results[11])||'—';
+  const dt=new Date().toLocaleString('tr-TR');
+  const secRows=SECS.map(s=>`<div class="s"><div class="sh"><span class="sb">${s.id}</span><span>${s.title}</span><small>${s.sub}</small></div><div class="sb2">${(sectionTexts[s.id]||'').replace(/\n/g,'<br>')}</div></div>`).join('');
+  const html=`<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>${curInfo.name} — MarketScope Raporu</title><style>
+  body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a2e;line-height:1.6;max-width:900px;margin:0 auto;padding:40px 32px}
+  .cover{text-align:center;padding:40px 0 30px;border-bottom:3px solid #1B4FD8;margin-bottom:30px}
+  .cover h1{font-size:22pt;font-weight:800;color:#0F1F3D;margin-bottom:6px}
+  .cover h2{font-size:13pt;color:#3B6EF8;font-weight:400}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:20px 0;background:#f7f8fa;border:1px solid #e4e7ec;border-radius:8px;padding:14px 20px}
+  .meta div{font-size:10pt}.meta span{color:#6b7280;font-weight:600;margin-right:8px}
+  .verdict{text-align:center;padding:14px;border-radius:8px;border:2px solid;margin:20px 0}
+  .vg{background:#ecfdf5;border-color:#059669;color:#065f46}.vy{background:#fffbeb;border-color:#d97706;color:#92400e}.vr{background:#fef2f2;border-color:#dc2626;color:#991b1b}
+  .verdict .vt{font-size:14pt;font-weight:700}.verdict .vs{font-size:11pt}
+  .s{margin-bottom:18px;border:1px solid #e4e7ec;border-radius:8px;overflow:hidden}
+  .sh{background:#0F1F3D;padding:9px 14px;display:flex;align-items:center;gap:10px}
+  .sb{background:#3B6EF8;color:#fff;width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10pt}
+  .sh span{color:#fff;font-weight:700;font-size:11pt}.sh small{color:rgba(255,255,255,.5);font-size:9pt;margin-left:6px}
+  .sb2{padding:12px 16px;background:#fff;font-size:10.5pt;line-height:1.7}
+  .risk{border:1px solid #fca5a5;border-radius:8px;overflow:hidden;margin-top:18px}
+  .rh{background:#B91C1C;color:#fff;padding:9px 14px;font-weight:700}.rb{padding:12px 16px;background:#fef2f2}
+  footer{margin-top:30px;padding-top:10px;border-top:1px solid #e4e7ec;font-size:9pt;color:#9ca3af;display:flex;justify-content:space-between}
+  </style></head><body>
+  <div class="cover"><p style="font-size:9pt;color:#6b7280;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">MarketScope AI · market.agenttr.org</p><h1>${curInfo.name}</h1><h2>EMEA Ürün Seçim Analiz Raporu</h2></div>
+  <div class="meta"><div><span>Ürün</span>${curInfo.name}</div><div><span>Hedef Pazar</span>${curInfo.market}</div><div><span>Kategori</span>${curInfo.cat}</div><div><span>İş Modeli</span>${curInfo.biz}</div><div><span>Alış/Satış</span>${curInfo.buy||'?'}/${curInfo.sell||'?'}</div><div><span>Tarih</span>${dt}</div></div>
+  <div class="verdict ${v.col==='green'?'vg':v.col==='red'?'vr':'vy'}"><div class="vt">${v.label}</div><div class="vs">Ağırlıklı Puan: <strong>${score}/100</strong></div></div>
+  ${secRows}
+  <div class="risk"><div class="rh">Risk Matrisi</div><div class="rb">${(results[9]||'').replace(/\n/g,'<br>')}</div></div>
+  <footer><span>MarketScope AI — market.agenttr.org · Gizli</span><span>${dt}</span></footer>
+  </body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=curInfo.name.replace(/[^\w\s]/g,'').trim().replace(/\s+/g,'_')+'_Analiz.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast('✓ Rapor indirildi');
+}
+
+// ── PLANS ─────────────────────────────────────────────────────────────────────
+async function renderPlans(){
+  try{
+    const r=await fetch(API+'/plans');
+    if(!r.ok)return;
+    const d=await r.json();
+    const grid=document.getElementById('planGrid');if(!grid)return;
+    grid.innerHTML=d.plans.map((p,i)=>`
+      <div class="plan-card${i===2?' featured':''}">
+        ${i===2?'<div class="plan-badge">En Popüler</div>':''}
+        <div class="plan-name">${p.name}</div>
+        <div class="plan-price">${p.price===0?'Ücretsiz':'$'+p.price}<span>${p.price>0?'/ay':''}</span></div>
+        <div class="plan-analyses">${p.analyses===-1?'Sınırsız analiz':p.analyses+' analiz/ay'}</div>
+        <ul class="plan-features">${p.features.map(f=>`<li>${f}</li>`).join('')}</ul>
+      </div>`).join('');
+  }catch(e){console.log('Plans load error',e);}
+}
+</script>
+</body>
+</html>
