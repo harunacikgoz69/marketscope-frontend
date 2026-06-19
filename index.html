@@ -192,7 +192,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .shead-sub{font-size:10px;color:var(--text3);margin-top:1px}
 .stoggle{font-size:14px;color:var(--text3);transition:transform .2s}
 .scard.open .stoggle{transform:rotate(180deg)}
-.sbody{padding:14px 16px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap;display:none}
+.sbody{padding:14px 16px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.7;display:none}
 .scard.open .sbody{display:block}
 
 /* ── LANDING (shown when not logged in) ──────────────────────────────────── */
@@ -474,7 +474,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const API = 'https://marketscope-api-production.up.railway.app'; // Railway URL — deploy sonrası güncellenecek
+const API = 'https://marketscope-api.up.railway.app'; // Railway URL — deploy sonrası güncellenecek
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 const TOTAL = 12;
@@ -858,45 +858,187 @@ function extractSection(report,letter){
   const m=report.match(re);return m?m[1].trim():'';
 }
 const SECS=[
-  {id:'A',title:'Pazar Analizi',sub:'TAM/SAM/SOM · CAGR · Segmentasyon',bc:'bb'},
-  {id:'B',title:'Rekabet Analizi',sub:'Rakip haritası · Giriş engelleri · Farklılaşma',bc:'bb'},
-  {id:'C',title:'Tedarikçi Analizi',sub:'OEM karşılaştırma · Sertifika · Risk',bc:'bn'},
-  {id:'D',title:'Fiyatlandırma',sub:'FOB→raf · Kanal marjları',bc:'bn'},
-  {id:'E',title:'Finansal Projeksiyon',sub:'5 yıl · ROI · Cash cycle',bc:'bgg'},
-  {id:'F',title:'Uyumluluk',sub:'CE/UKCA · GTİP · İthalat',bc:'bo'},
-  {id:'G',title:'Stratejik Uyum',sub:'SWOT · Sinerji · Fırsat',bc:'bb'},
-  {id:'H',title:'Puanlama & Karar',sub:'8 kriter · Ağırlıklı skor · Aksiyon planı',bc:'bn'},
+  {id:'A',title:'Pazar Analizi',sub:'TAM/SAM/SOM · CAGR · Segmentasyon · Büyüme katalizörleri · Hedef müşteri profili',bc:'bb', agentIdx:0},
+  {id:'B',title:'Rekabet Analizi',sub:'Rakip fiyat haritası · Giriş engelleri · Farklılaşma matrisi · Segment boşluğu',bc:'bb', agentIdx:1},
+  {id:'C',title:'Tedarikçi Analizi',sub:'Min. 3 OEM karşılaştırma · Factory audit · Sertifikasyon · Risk matrisi',bc:'bn', agentIdx:2},
+  {id:'D',title:'Fiyatlandırma',sub:'FOB→raf tüm maliyet kalemleri · Kanal bazlı marj analizi · Eşik değerlendirmesi',bc:'bn', agentIdx:4},
+  {id:'E',title:'Finansal Projeksiyon',sub:'5 yıl senaryo tablosu · ROI · Başabaş · Cash conversion cycle',bc:'bgg', agentIdx:5},
+  {id:'F',title:'Uyumluluk',sub:'CE/UKCA/MDR/AQAP sertifika durumu · GTİP/ithalat kontrolü · Dual-use',bc:'bo', agentIdx:3},
+  {id:'G',title:'Stratejik Uyum',sub:'SWOT · Pazar fırsatı · Şirket uyumu',bc:'bb'},
+  {id:'H',title:'Puanlama & Karar',sub:'8 kriterin ağırlıklı puanlaması · Karar eşikleri · Aksiyon planı',bc:'bn', agentIdx:8},
 ];
-function buildReport(){
-  const report=results[11]||'';const decision=results[8]||'';
-  const v=parseVerdict(report+' '+decision);
+function buildReport() {
+  const report=results[11]||'';
+  const decision=results[8]||'';
+  const combined=report+' '+decision;
+  const v=parseVerdict(combined);
   const score=parseScore(decision)||parseScore(report);
-  document.getElementById('rTitle').textContent=curInfo.name+' — Analiz Raporu';
-  const prov=currentProvider==='claude'?'Claude':'OpenAI';
-  document.getElementById('rSub').textContent=`MarketScope AI · ${prov} · ${new Date().toLocaleString('tr-TR')}`;
+
+  document.getElementById('rTitle').textContent=curInfo.name+' — Kapsamlı Analiz Raporu';
+  const prov=currentProvider==='claude'?'Claude ('+document.getElementById('modelSel').value+')':'OpenAI ('+document.getElementById('modelSel').value+')';
+  document.getElementById('rSub').textContent='MarketScope AI · '+prov+' · '+new Date().toLocaleString('tr-TR');
   const vc=document.getElementById('rVerdict');vc.textContent=v.label;vc.className='vchip '+v.cls;
-  if(score){document.getElementById('rScore').textContent=score;const f=document.getElementById('rFill');f.className='score-fill sf-'+v.col;setTimeout(()=>f.style.width=score+'%',200);}
+  if(score){
+    document.getElementById('rScore').textContent=score;
+    const f=document.getElementById('rFill');
+    f.className='score-fill sf-'+v.col;
+    setTimeout(()=>f.style.width=score+'%',200);
+  }
   document.getElementById('mProd').textContent=curInfo.name;
   document.getElementById('mMarket').textContent=curInfo.market;
   document.getElementById('mBiz').textContent=curInfo.biz;
   document.getElementById('mDate').textContent=new Date().toLocaleDateString('tr-TR');
-  SECS.forEach(s=>{sectionTexts[s.id]=extractSection(report,s.id);});
-  if(!sectionTexts['A'])sectionTexts['A']=results[0];
-  if(!sectionTexts['B'])sectionTexts['B']=results[1];
-  if(!sectionTexts['C'])sectionTexts['C']=results[2];
-  if(!sectionTexts['D'])sectionTexts['D']=results[4];
-  if(!sectionTexts['E'])sectionTexts['E']=results[5];
-  if(!sectionTexts['F'])sectionTexts['F']=results[3];
-  if(!sectionTexts['G'])sectionTexts['G']=results[10];
-  if(!sectionTexts['H'])sectionTexts['H']=results[8];
-  const container=document.getElementById('secContainer');container.innerHTML='';
+
+  // Parse section summaries from report agent
+  SECS.forEach(s=>{ sectionTexts[s.id]=extractSection(report,s.id); });
+
+  const container=document.getElementById('secContainer');
+  container.innerHTML='';
+
+  // ── YÖNETİCİ ÖZETİ ──
+  const execCard = document.createElement('div');
+  execCard.className='scard open';
+  execCard.innerHTML=`
+    <div class="shead" onclick="this.parentElement.classList.toggle('open')">
+      <div class="sbadge" style="background:#0F1F3D;color:#fff;font-size:10px">ÖZ</div>
+      <div class="shead-text">
+        <div class="shead-title">Yönetici Özeti</div>
+        <div class="shead-sub">Nihai karar · Kritik bulgular · Öncelikli aksiyonlar</div>
+      </div>
+      <div class="stoggle">▾</div>
+    </div>
+    <div class="sbody" style="background:#F7F8FA">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px;border-top:3px solid ${v.col==='green'?'#0E7A4E':v.col==='red'?'#B91C1C':'#D97706'}">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Nihai Karar</div>
+          <div style="font-size:16px;font-weight:700;color:var(--navy)">${v.label}</div>
+          <div style="font-size:20px;font-weight:800;color:${v.col==='green'?'#0E7A4E':v.col==='red'?'#B91C1C':'#D97706'};margin-top:4px">${score||'—'}<span style="font-size:13px;font-weight:400;color:var(--text3)">/100</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Ürün Bilgisi</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.8">
+            <strong>${curInfo.name}</strong><br>
+            ${curInfo.cat} · ${curInfo.market}<br>
+            Alış: ${curInfo.buy||'?'} → Satış: ${curInfo.sell||'?'}<br>
+            Model: ${curInfo.biz}
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Analiz Bilgisi</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.8">
+            ${new Date().toLocaleString('tr-TR')}<br>
+            ${prov}<br>
+            12 Ajan · 3 Faz<br>
+            A-H Bölümleri
+          </div>
+        </div>
+      </div>
+      <div style="white-space:pre-wrap;font-size:13px;color:var(--text2);line-height:1.7">${sectionTexts['H']||decision||'Karar bölümü hazırlanıyor...'}</div>
+    </div>`;
+  container.appendChild(execCard);
+
+  // ── A-H BÖLÜMLER — TAM İÇERİK ──
   SECS.forEach((s,idx)=>{
-    const card=document.createElement('div');card.className='scard'+(idx===7?' open':'');
-    card.innerHTML=`<div class="shead" onclick="this.parentElement.classList.toggle('open')"><div class="sbadge ${s.bc}">${s.id}</div><div class="shead-text"><div class="shead-title">${s.title}</div><div class="shead-sub">${s.sub}</div></div><div class="stoggle">▾</div></div><div class="sbody">${sectionTexts[s.id]||'(İçerik hazırlanamadı)'}</div>`;
+    if(s.id==='H') return; // H already in executive summary
+
+    // Get full agent output + section summary
+    const rawAgentOutput = fullTexts[s.agentIdx] || results[s.agentIdx] || '';
+    const sectionSummary = sectionTexts[s.id] || '';
+
+    // Combine: summary first, then full agent analysis
+    const fullContent = buildSectionContent(s.id, sectionSummary, rawAgentOutput);
+
+    const card=document.createElement('div');
+    card.className='scard'+(idx===0?' open':'');
+    card.innerHTML=`
+      <div class="shead" onclick="this.parentElement.classList.toggle('open')">
+        <div class="sbadge ${s.bc}">${s.id}</div>
+        <div class="shead-text">
+          <div class="shead-title">${s.title}</div>
+          <div class="shead-sub">${s.sub}</div>
+        </div>
+        <div class="stoggle">▾</div>
+      </div>
+      <div class="sbody">${fullContent}</div>`;
     container.appendChild(card);
   });
+
+  // ── TARTIŞMA TUTANAĞI ──
+  const debateCard = document.createElement('div');
+  debateCard.className='scard';
+  debateCard.innerHTML=`
+    <div class="shead" onclick="this.parentElement.classList.toggle('open')">
+      <div class="sbadge" style="background:#7C3AED;color:#fff">T</div>
+      <div class="shead-text">
+        <div class="shead-title">Tartışma Tutanağı</div>
+        <div class="shead-sub">Savunucu argümanları · Eleştirmen karşı argümanları · Tam metin</div>
+      </div>
+      <div class="stoggle">▾</div>
+    </div>
+    <div class="sbody">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#0E7A4E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #0E7A4E">👍 SAVUNUCU — Portföye Al</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap">${fullTexts[6]||results[6]||'—'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#B91C1C;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #B91C1C">👎 ELEŞTİRMEN — Portföye Alma</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap">${fullTexts[7]||results[7]||'—'}</div>
+        </div>
+      </div>
+    </div>`;
+  container.appendChild(debateCard);
+
+  // ── RİSK MATRİSİ ──
+  const riskCard = document.createElement('div');
+  riskCard.className='scard';
+  riskCard.innerHTML=`
+    <div class="shead" onclick="this.parentElement.classList.toggle('open')">
+      <div class="sbadge" style="background:#B91C1C;color:#fff">R</div>
+      <div class="shead-text">
+        <div class="shead-title">Risk Matrisi</div>
+        <div class="shead-sub">Olasılık · Etki · Mitigasyon · Birleşik risk seviyesi</div>
+      </div>
+      <div class="stoggle">▾</div>
+    </div>
+    <div class="sbody" style="background:#FEF2F2">
+      <div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap">${fullTexts[9]||results[9]||'—'}</div>
+    </div>`;
+  container.appendChild(riskCard);
+
+  // ── PUANLAMA & KARAR DETAYI ──
+  const scoringCard = document.createElement('div');
+  scoringCard.className='scard open';
+  scoringCard.innerHTML=`
+    <div class="shead" onclick="this.parentElement.classList.toggle('open')">
+      <div class="sbadge bn">H</div>
+      <div class="shead-text">
+        <div class="shead-title">Puanlama & Karar Detayı</div>
+        <div class="shead-sub">8 kriterin ağırlıklı puanlaması · Karar eşikleri · Aksiyon planı</div>
+      </div>
+      <div class="stoggle">▾</div>
+    </div>
+    <div class="sbody">
+      <div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap">${fullTexts[8]||results[8]||'—'}</div>
+    </div>`;
+  container.appendChild(scoringCard);
+
   document.getElementById('reportWrap').classList.add('show');
   document.getElementById('reportWrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function buildSectionContent(sectionId, summary, rawOutput) {
+  var out = '';
+  if (summary) {
+    out += '<div style="background:#F0F4FF;border-left:3px solid #1B4FD8;padding:12px 14px;border-radius:0 6px 6px 0;margin-bottom:16px">'
+         + '<div style="font-size:10px;font-weight:700;color:#1B4FD8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">BÖLÜM ÖZETİ</div>'
+         + '<div style="font-size:13px;color:#0F1F3D;line-height:1.7;white-space:pre-wrap">' + summary + '</div></div>';
+  }
+  out += rawOutput
+    ? '<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);margin-top:12px">DETAYLI ANALİZ</div>'
+      + '<div style="font-size:13px;color:var(--text2);line-height:1.75;white-space:pre-wrap">' + rawOutput + '</div></div>'
+    : '<div style="font-size:13px;color:var(--text3);font-style:italic">İçerik hazırlanıyor...</div>';
+  return out;
 }
 function resetAll(){
   uploadedFiles=[];renderFileList();results=Array(TOTAL).fill('');fullTexts=Array(TOTAL).fill('');
@@ -910,59 +1052,107 @@ function resetAll(){
 
 // ── HTML EXPORT ───────────────────────────────────────────────────────────────
 function exportHTML(){
-  const v=parseVerdict(results[11]+results[8]);
-  const score=parseScore(results[8])||parseScore(results[11])||'—';
-  const dt=new Date().toLocaleString('tr-TR');
-  const secRows=SECS.map(s=>`<div class="s"><div class="sh"><span class="sb">${s.id}</span><span>${s.title}</span><small>${s.sub}</small></div><div class="sb2">${(sectionTexts[s.id]||'').replace(/\n/g,'<br>')}</div></div>`).join('');
-  const html=`<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>${curInfo.name} — MarketScope Raporu</title><style>
-  body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a2e;line-height:1.6;max-width:900px;margin:0 auto;padding:40px 32px}
-  .cover{text-align:center;padding:40px 0 30px;border-bottom:3px solid #1B4FD8;margin-bottom:30px}
-  .cover h1{font-size:22pt;font-weight:800;color:#0F1F3D;margin-bottom:6px}
-  .cover h2{font-size:13pt;color:#3B6EF8;font-weight:400}
-  .meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:20px 0;background:#f7f8fa;border:1px solid #e4e7ec;border-radius:8px;padding:14px 20px}
-  .meta div{font-size:10pt}.meta span{color:#6b7280;font-weight:600;margin-right:8px}
-  .verdict{text-align:center;padding:14px;border-radius:8px;border:2px solid;margin:20px 0}
-  .vg{background:#ecfdf5;border-color:#059669;color:#065f46}.vy{background:#fffbeb;border-color:#d97706;color:#92400e}.vr{background:#fef2f2;border-color:#dc2626;color:#991b1b}
-  .verdict .vt{font-size:14pt;font-weight:700}.verdict .vs{font-size:11pt}
-  .s{margin-bottom:18px;border:1px solid #e4e7ec;border-radius:8px;overflow:hidden}
-  .sh{background:#0F1F3D;padding:9px 14px;display:flex;align-items:center;gap:10px}
-  .sb{background:#3B6EF8;color:#fff;width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10pt}
-  .sh span{color:#fff;font-weight:700;font-size:11pt}.sh small{color:rgba(255,255,255,.5);font-size:9pt;margin-left:6px}
-  .sb2{padding:12px 16px;background:#fff;font-size:10.5pt;line-height:1.7}
-  .risk{border:1px solid #fca5a5;border-radius:8px;overflow:hidden;margin-top:18px}
-  .rh{background:#B91C1C;color:#fff;padding:9px 14px;font-weight:700}.rb{padding:12px 16px;background:#fef2f2}
-  footer{margin-top:30px;padding-top:10px;border-top:1px solid #e4e7ec;font-size:9pt;color:#9ca3af;display:flex;justify-content:space-between}
-  </style></head><body>
-  <div class="cover"><p style="font-size:9pt;color:#6b7280;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">MarketScope AI · market.agenttr.org</p><h1>${curInfo.name}</h1><h2>EMEA Ürün Seçim Analiz Raporu</h2></div>
-  <div class="meta"><div><span>Ürün</span>${curInfo.name}</div><div><span>Hedef Pazar</span>${curInfo.market}</div><div><span>Kategori</span>${curInfo.cat}</div><div><span>İş Modeli</span>${curInfo.biz}</div><div><span>Alış/Satış</span>${curInfo.buy||'?'}/${curInfo.sell||'?'}</div><div><span>Tarih</span>${dt}</div></div>
-  <div class="verdict ${v.col==='green'?'vg':v.col==='red'?'vr':'vy'}"><div class="vt">${v.label}</div><div class="vs">Ağırlıklı Puan: <strong>${score}/100</strong></div></div>
-  ${secRows}
-  <div class="risk"><div class="rh">Risk Matrisi</div><div class="rb">${(results[9]||'').replace(/\n/g,'<br>')}</div></div>
-  <footer><span>MarketScope AI — market.agenttr.org · Gizli</span><span>${dt}</span></footer>
-  </body></html>`;
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=curInfo.name.replace(/[^\w\s]/g,'').trim().replace(/\s+/g,'_')+'_Analiz.html';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  toast('✓ Rapor indirildi');
-}
+  var v=parseVerdict(results[11]+results[8]);
+  var score=parseScore(results[8])||parseScore(results[11])||'—';
+  var dt=new Date().toLocaleString('tr-TR');
+  var prov=currentProvider==='claude'?'Claude':'OpenAI';
+  var model=document.getElementById('modelSel').value;
+  var NL='<br>';
 
-// ── PLANS ─────────────────────────────────────────────────────────────────────
-async function renderPlans(){
-  try{
-    const r=await fetch(API+'/plans');
-    if(!r.ok)return;
-    const d=await r.json();
-    const grid=document.getElementById('planGrid');if(!grid)return;
-    grid.innerHTML=d.plans.map((p,i)=>`
-      <div class="plan-card${i===2?' featured':''}">
-        ${i===2?'<div class="plan-badge">En Popüler</div>':''}
-        <div class="plan-name">${p.name}</div>
-        <div class="plan-price">${p.price===0?'Ücretsiz':'$'+p.price}<span>${p.price>0?'/ay':''}</span></div>
-        <div class="plan-analyses">${p.analyses===-1?'Sınırsız analiz':p.analyses+' analiz/ay'}</div>
-        <ul class="plan-features">${p.features.map(f=>`<li>${f}</li>`).join('')}</ul>
-      </div>`).join('');
-  }catch(e){console.log('Plans load error',e);}
+  var secs='';
+  SECS.filter(function(s){return s.id!=='H';}).forEach(function(s){
+    var summ=sectionTexts[s.id]||'';
+    var raw=fullTexts[s.agentIdx]||results[s.agentIdx]||'';
+    var sb=summ ? '<div class="sb"><div class="sl">BÖLÜM ÖZETİ</div><div>'+summ.split('\n').join(NL)+'</div></div>' : '';
+    secs += '<div class="s"><div class="sh">'
+          + '<span class="sg">'+s.id+'</span>'
+          + '<div><span class="st">'+s.title+'</span><small class="ss">'+s.sub+'</small></div>'
+          + '</div><div class="sc">'+sb
+          + '<div class="dl">DETAYLI ANALİZ</div>'
+          + '<div>'+raw.split('\n').join(NL)+'</div></div></div>';
+  });
+
+  var vc=v.col==='green'?'vg':v.col==='red'?'vr':'vy';
+  var sf=v.col==='green'?'#0E7A4E':v.col==='red'?'#B91C1C':'#D97706';
+  var sw=isNaN(parseInt(score))?50:parseInt(score);
+
+  var css='*{box-sizing:border-box}body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a2e;line-height:1.6;margin:0}'
+    +'.cv{text-align:center;padding:40px;background:#0F1F3D;color:#fff}'
+    +'.cv h1{font-size:22pt;font-weight:800;margin:0 0 6px}'
+    +'.cv h2{font-size:12pt;color:rgba(255,255,255,.6);font-weight:400;margin:0 0 14px}'
+    +'.chip{display:inline-block;padding:7px 20px;border-radius:20px;font-size:13pt;font-weight:700}'
+    +'.vg{background:#ECFDF5;color:#065F46}.vy{background:#FFFBEB;color:#92400E}.vr{background:#FEF2F2;color:#991B1B}'
+    +'.mg{display:grid;grid-template-columns:repeat(3,1fr);background:#f7f8fa;border-bottom:3px solid #1B4FD8}'
+    +'.mi{padding:12px 16px;border-right:1px solid #e4e7ec}'
+    +'.ml{font-size:8pt;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:2px}'
+    +'.mv{font-size:11pt;font-weight:600;color:#0F1F3D}'
+    +'.wr{padding:20px 32px}'
+    +'.ex{border:2px solid #1B4FD8;border-radius:8px;padding:16px 20px;margin-bottom:20px}'
+    +'.et{font-size:10pt;font-weight:700;color:#1B4FD8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e4e7ec}'
+    +'.sr{display:flex;align-items:center;gap:16px;margin-bottom:12px;padding:10px 14px;background:#f7f8fa;border-radius:6px}'
+    +'.sn{font-size:26pt;font-weight:800;color:#0F1F3D;line-height:1}'
+    +'.s{margin-bottom:16px;border:1px solid #e4e7ec;border-radius:8px;overflow:hidden}'
+    +'.sh{background:#0F1F3D;padding:9px 14px;display:flex;align-items:flex-start;gap:10px}'
+    +'.sg{background:#1B4FD8;color:#fff;min-width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10pt}'
+    +'.st{color:#fff;font-weight:700;font-size:11pt;display:block}.ss{color:rgba(255,255,255,.5);font-size:8pt;display:block;margin-top:2px}'
+    +'.sc{padding:14px 18px;background:#fff;font-size:10.5pt;color:#374151;line-height:1.75}'
+    +'.sb{background:#EEF3FF;border-left:3px solid #1B4FD8;padding:10px 12px;border-radius:0 6px 6px 0;margin-bottom:12px}'
+    +'.sl{font-size:8pt;font-weight:700;color:#1B4FD8;text-transform:uppercase;margin-bottom:3px}'
+    +'.dl{font-size:8pt;font-weight:700;color:#9ca3af;text-transform:uppercase;margin:12px 0 6px;padding-top:10px;border-top:1px solid #e4e7ec}'
+    +'.db{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}'
+    +'.dp{border-left:3px solid #0E7A4E;padding:10px 12px;background:#EDFAF4;font-size:10.5pt;line-height:1.7}'
+    +'.dc{border-left:3px solid #B91C1C;padding:10px 12px;background:#FEF2F2;font-size:10.5pt;line-height:1.7}'
+    +'.dpl{font-size:8pt;font-weight:700;color:#0E7A4E;text-transform:uppercase;margin-bottom:6px}'
+    +'.dcl{font-size:8pt;font-weight:700;color:#B91C1C;text-transform:uppercase;margin-bottom:6px}'
+    +'.rb{background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;overflow:hidden;margin-bottom:16px}'
+    +'.rh{background:#B91C1C;color:#fff;padding:9px 14px;font-weight:700}.rc{padding:12px 16px;font-size:10.5pt;line-height:1.7}'
+    +'.hb{border:2px solid #0F1F3D;border-radius:8px;overflow:hidden;margin-bottom:16px}'
+    +'.hh{background:#0F1F3D;color:#fff;padding:9px 14px;font-weight:700}.hc{padding:12px 16px;font-size:10.5pt;line-height:1.7}'
+    +'footer{margin-top:20px;padding-top:10px;border-top:1px solid #e4e7ec;font-size:8pt;color:#9ca3af;display:flex;justify-content:space-between}';
+
+  var h='<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">'
+    +'<title>'+curInfo.name+' - Analiz Raporu</title>'
+    +'<style>'+css+'</style></head><body>'
+    +'<div class="cv">'
+    +'<p style="font-size:9pt;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">MarketScope AI &middot; market.agenttr.org</p>'
+    +'<h1>'+curInfo.name+'</h1>'
+    +'<h2>EMEA Kapsamli Urun Secim Analiz Raporu</h2>'
+    +'<div class="chip '+vc+'">'+v.label+' &mdash; '+score+'/100 Puan</div></div>'
+    +'<div class="mg">'
+    +'<div class="mi"><div class="ml">Urun</div><div class="mv">'+curInfo.name+'</div></div>'
+    +'<div class="mi"><div class="ml">Kategori</div><div class="mv">'+curInfo.cat+'</div></div>'
+    +'<div class="mi"><div class="ml">Hedef Pazar</div><div class="mv">'+curInfo.market+'</div></div>'
+    +'<div class="mi"><div class="ml">Is Modeli</div><div class="mv">'+curInfo.biz+'</div></div>'
+    +'<div class="mi"><div class="ml">Alis / Satis</div><div class="mv">'+(curInfo.buy||'?')+' / '+(curInfo.sell||'?')+'</div></div>'
+    +'<div class="mi"><div class="ml">Tarih</div><div class="mv">'+dt+'</div></div>'
+    +'</div>'
+    +'<div class="wr">'
+    +'<div class="ex"><div class="et">Yonetici Ozeti &amp; Nihai Karar</div>'
+    +'<div class="sr"><div><div class="sn">'+score+'</div><div style="font-size:9pt;color:#6b7280">/ 100 puan</div></div>'
+    +'<div style="flex:1"><div style="font-size:13pt;font-weight:700;color:#0F1F3D">'+v.label+'</div>'
+    +'<div style="height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-top:4px">'
+    +'<div style="width:'+sw+'%;height:100%;background:'+sf+';border-radius:4px"></div></div></div></div>'
+    +'<div style="font-size:10.5pt;color:#374151;line-height:1.75">'+(sectionTexts['H']||results[8]||'').split('\n').join(NL)+'</div></div>'
+    +'<h2 style="font-size:13pt;font-weight:700;color:#0F1F3D;margin:0 0 14px">A &mdash; H Bolum Analizleri</h2>'
+    +secs
+    +'<h2 style="font-size:13pt;font-weight:700;color:#0F1F3D;margin:16px 0 14px">Tartisma Tutanagi</h2>'
+    +'<div class="db">'
+    +'<div class="dp"><div class="dpl">SAVUNUCU &mdash; Portfoye Al</div>'+(fullTexts[6]||results[6]||'').split('\n').join(NL)+'</div>'
+    +'<div class="dc"><div class="dcl">ELESTIRENMEN &mdash; Portfoye Alma</div>'+(fullTexts[7]||results[7]||'').split('\n').join(NL)+'</div>'
+    +'</div>'
+    +'<div class="rb"><div class="rh">Risk Matrisi</div><div class="rc">'+(fullTexts[9]||results[9]||'').split('\n').join(NL)+'</div></div>'
+    +'<div class="hb"><div class="hh">Puanlama &amp; Karar Detayi (Bolum H)</div><div class="hc">'+(fullTexts[8]||results[8]||'').split('\n').join(NL)+'</div></div>'
+    +'</div>'
+    +'<footer><span>MarketScope AI &middot; market.agenttr.org &middot; '+prov+' ('+model+')</span><span>'+dt+'</span></footer>'
+    +'</body></html>';
+
+  var blob=new Blob([h],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download=curInfo.name.replace(/[^a-zA-Z0-9 ]/g,'').trim().replace(/ +/g,'_')+'_Analiz.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast('Rapor indirildi');
 }
 </script>
 </body>
