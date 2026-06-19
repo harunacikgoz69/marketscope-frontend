@@ -466,7 +466,49 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         <div class="rmeta">
           <div class="rmi"><div class="rmi-label">Ürün</div><div class="rmi-val" id="mProd">—</div></div>
           <div class="rmi"><div class="rmi-label">Hedef Pazar</div><div class="rmi-val" id="mMarket">—</div></div>
-          <div class="rmi"><d
+          <div class="rmi<div class="rmi-label">İş Modeli</div><div class="rmi-val" id="mBiz">—</div></div>
+          <div class="rmi"><div class="rmi-label">Tarih</div><div class="rmi-val" id="mDate">—</div></div>
+        </div>
+      </div>
+      <div class="sections" id="sectionsContainer"></div>
+    </div>
+
+    <div class="empty" id="emptyState">
+      <div class="empty-icon">🔍</div>
+      <h3>Analiz Bekleniyor</h3>
+      <p>Ürün bilgilerini girin ve analizi başlatın.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- LANDING -->
+<div id="landingArea">
+  <div class="landing">
+    <div class="landing-badge">🚀 AgentTR tarafından</div>
+    <h1>Herhangi Bir Ürün İçin<br><span>Profesyonel Pazar Analizi</span></h1>
+    <p>12 AI ajan saniyeler içinde EMEA pazar büyüklüğü, rekabet haritası, tedarikçi değerlendirmesi ve 5 yıllık finansal projeksiyonu A-H bölümlerinde hazırlar.</p>
+    <div class="landing-ctas">
+      <button class="btn btn-primary btn-lg" onclick="openAuth('register')">Ücretsiz Başla — 3 Analiz</button>
+      <button class="btn btn-ghost btn-lg" onclick="openAuth('login')">Giriş Yap</button>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="feature-icon">🤖</div><div class="feature-title">12 Uzman Ajan</div><div class="feature-desc">Paralel çalışan ajanlar pazar, rekabet, tedarik, mevzuat, fiyat ve finansal analizi aynı anda yürütür.</div></div>
+      <div class="feature-card"><div class="feature-icon">🌍</div><div class="feature-title">EMEA Odaklı</div><div class="feature-desc">Türkiye, Avrupa ve Orta Doğu pazarları için ayrı ayrı TAM/SAM/SOM ve CAGR analizi.</div></div>
+      <div class="feature-card"><div class="feature-icon">📎</div><div class="feature-title">Dosya Yükleme</div><div class="feature-desc">Rakip katalog, pazar raporu veya teknik dokümanlarınızı yükleyin — ajan verileri direkt kullanır.</div></div>
+      <div class="feature-card"><div class="feature-icon">⚖️</div><div class="feature-title">Tartışmalı Karar</div><div class="feature-desc">Savunucu ve Eleştirmen ajan birbiriyle tartışır, Karar ajanı ağırlıklı puan verir.</div></div>
+      <div class="feature-card"><div class="feature-icon">🔄</div><div class="feature-title">Claude + GPT-4o</div><div class="feature-desc">Anthropic Claude veya OpenAI GPT-4o ile analiz yapın. Model seçimi sizde.</div></div>
+      <div class="feature-card"><div class="feature-icon">📄</div><div class="feature-title">YK Kalitesi Rapor</div><div class="feature-desc">A'dan H'ye tüm bölümleri içeren profesyonel HTML raporu indirin — yazdırılabilir, A4 formatında.</div></div>
+    </div>
+    <h2 style="font-size:20px;font-weight:700;color:var(--navy);margin-bottom:20px">Planlar</h2>
+    <div class="plan-grid" id="planGrid"></div>
+    <p style="font-size:12px;color:var(--text3)">Ödeme entegrasyonu yakında · Şu an tüm planlar ücretsiz erişimde</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const API = 'https://marketscope-api-production.up.railway.app';
 
