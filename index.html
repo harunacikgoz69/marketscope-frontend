@@ -224,6 +224,15 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .empty-icon{font-size:44px;margin-bottom:12px;opacity:.3}
 .empty h3{font-size:15px;color:var(--text2);margin-bottom:5px;font-weight:600}
 .empty p{font-size:13px;max-width:320px;margin:0 auto}
+.claude-modal{position:fixed;inset:0;background:rgba(15,31,61,.6);z-index:600;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.claude-modal.hidden{display:none}
+.claude-box{background:#fff;border-radius:12px;padding:28px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.claude-box h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.claude-box p{font-size:13px;color:var(--text2);margin-bottom:18px}
+.claude-box .form-input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:14px;outline:none;font-family:inherit;margin-bottom:12px}
+.claude-box .form-input:focus{border-color:var(--orange-c);box-shadow:0 0 0 3px rgba(212,102,42,.1)}
+.claude-err{font-size:12px;color:var(--red);margin-bottom:10px;display:none}
+.claude-btns{display:flex;gap:8px}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:10px 16px;border-radius:var(--r-sm);font-size:13px;box-shadow:var(--shadow-md);transform:translateY(70px);opacity:0;transition:.25s;z-index:999;max-width:340px}
 .toast.show{transform:translateY(0);opacity:1}
 
@@ -334,13 +343,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <!-- Provider Bar -->
     <div class="provider-bar">
       <div class="provider-tabs">
-        <button class="ptab active claude" id="ptClaude" onclick="setProvider('claude')">Claude</button>
-        <button class="ptab openai" id="ptOpenAI" onclick="setProvider('openai')">OpenAI</button>
+        <button class="ptab" id="ptClaude" onclick="setProvider('claude')">Claude</button>
+        <button class="ptab active openai" id="ptOpenAI" onclick="setProvider('openai')">OpenAI</button>
       </div>
       <select class="model-sel" id="modelSel">
-        <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-        <option value="claude-opus-4-6">claude-opus-4-6</option>
-        <option value="claude-haiku-4-5-20251001">claude-haiku-4-5</option>
+        <option value="gpt-4o">gpt-4o</option>
+        <option value="gpt-4o-mini">gpt-4o-mini</option>
+        <option value="gpt-4-turbo">gpt-4-turbo</option>
+        <option value="o1-mini">o1-mini</option>
       </select>
       <div class="provider-info" id="usageBadge"></div>
     </div>
@@ -508,6 +518,21 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 
 <div class="toast" id="toast"></div>
 
+<!-- Claude Password Modal -->
+<div class="claude-modal hidden" id="claudeModal">
+  <div class="claude-box">
+    <h3>🔒 Claude Erişimi</h3>
+    <p>Claude modelini kullanmak için erişim şifresini girin.</p>
+    <input type="password" class="form-input" id="claudePasswordInput" placeholder="Şifre" onkeydown="if(event.key==='Enter')submitClaudePassword()">
+    <div class="claude-err" id="claudeErr">Hatalı şifre, tekrar deneyin.</div>
+    <div class="claude-btns">
+      <button class="btn btn-primary" style="flex:1" onclick="submitClaudePassword()">Giriş</button>
+      <button class="btn btn-ghost" onclick="closeClaudeModal()">İptal</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const API = 'https://marketscope-api-production.up.railway.app';
@@ -516,7 +541,8 @@ const API = 'https://marketscope-api-production.up.railway.app';
 const TOTAL = 12;
 const SYS = `Sen deneyimli bir EMEA bölgesi ürün ticareti ve pazar analisti uzmanısın. Yanıtlarını Türkçe ver. Gerçek piyasa verisi olmadığında "tahminen", "piyasa verilerine göre" ifadelerini kullan. Somut, sayısal, madde madde yaz.`;
 
-let currentProvider = 'claude';
+let currentProvider = 'openai';
+let claudeUnlocked = false;
 let results = Array(TOTAL).fill('');
 let fullTexts = Array(TOTAL).fill('');
 let uploadedFiles = [];
@@ -531,6 +557,7 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', async () => {
   renderHistory();
   renderPlans();
+  setProvider('openai');
   renderPlans();
   if (authToken) {
     await loadUser();
@@ -683,6 +710,10 @@ const OPENAI_MODELS = [
 ];
 function checkKey(){}
 function setProvider(p) {
+  if(p === 'claude' && !claudeUnlocked) {
+    openClaudeModal();
+    return;
+  }
   currentProvider = p;
   var tc = document.getElementById('ptClaude');
   var to = document.getElementById('ptOpenAI');
@@ -692,6 +723,42 @@ function setProvider(p) {
   if(sel) {
     var models = p==='claude' ? CLAUDE_MODELS : OPENAI_MODELS;
     sel.innerHTML = models.map(function(m){ return '<option value="'+m.v+'">'+m.l+'</option>'; }).join('');
+  }
+}
+
+function openClaudeModal() {
+  document.getElementById('claudeModal').classList.remove('hidden');
+  document.getElementById('claudePasswordInput').value = '';
+  document.getElementById('claudeErr').style.display = 'none';
+  setTimeout(function(){ document.getElementById('claudePasswordInput').focus(); }, 100);
+}
+
+function closeClaudeModal() {
+  document.getElementById('claudeModal').classList.add('hidden');
+}
+
+async function submitClaudePassword() {
+  var pw = document.getElementById('claudePasswordInput').value.trim();
+  if(!pw) return;
+  try {
+    var r = await fetch(API + '/auth/claude-unlock', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({password: pw})
+    });
+    if(r.ok) {
+      claudeUnlocked = true;
+      closeClaudeModal();
+      setProvider('claude');
+      toast('✓ Claude erişimi açıldı');
+    } else {
+      document.getElementById('claudeErr').style.display = 'block';
+      document.getElementById('claudePasswordInput').value = '';
+      document.getElementById('claudePasswordInput').focus();
+    }
+  } catch(e) {
+    document.getElementById('claudeErr').textContent = 'Bağlantı hatası.';
+    document.getElementById('claudeErr').style.display = 'block';
   }
 }
 
