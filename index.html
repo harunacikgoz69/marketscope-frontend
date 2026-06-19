@@ -531,6 +531,7 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', async () => {
   renderHistory();
   renderPlans();
+  renderPlans();
   if (authToken) {
     await loadUser();
   }
@@ -680,16 +681,18 @@ const OPENAI_MODELS = [
   {v:'gpt-4o',l:'gpt-4o'},{v:'gpt-4o-mini',l:'gpt-4o-mini'},
   {v:'gpt-4-turbo',l:'gpt-4-turbo'},{v:'o1-mini',l:'o1-mini'},
 ];
+function checkKey(){}
 function setProvider(p) {
   currentProvider = p;
-  document.getElementById('tabClaude').className = 'provider-tab' + (p==='claude' ? ' active claude' : '');
-  document.getElementById('tabOpenAI').className = 'provider-tab' + (p==='openai' ? ' active openai' : '');
-  document.getElementById('keyLabel').textContent = p==='claude' ? 'Claude' : 'OpenAI';
-  const sel = document.getElementById('modelSelect');
-  const models = p==='claude' ? CLAUDE_MODELS : OPENAI_MODELS;
-  sel.innerHTML = models.map(m=>`<option value="${m.v}">${m.l}</option>`).join('');
-  document.getElementById('apiKey').placeholder = p==='claude' ? 'sk-ant-...' : 'sk-...';
-  checkKey();
+  var tc = document.getElementById('ptClaude');
+  var to = document.getElementById('ptOpenAI');
+  if(tc) tc.className = 'ptab' + (p==='claude' ? ' active claude' : '');
+  if(to) to.className = 'ptab' + (p==='openai' ? ' active openai' : '');
+  var sel = document.getElementById('modelSel');
+  if(sel) {
+    var models = p==='claude' ? CLAUDE_MODELS : OPENAI_MODELS;
+    sel.innerHTML = models.map(function(m){ return '<option value="'+m.v+'">'+m.l+'</option>'; }).join('');
+  }
 }
 
 function getExt(n){return n.split('.').pop().toLowerCase();}
@@ -1723,6 +1726,27 @@ function exportHTML(){
   toast('✓ YK Analiz Raporu indirildi');
 }
 
+
+function renderPlans(){
+  var plans=[
+    {name:'Ücretsiz',price:0,analyses:3,features:['3 analiz/ay','12 ajan · A-H bölümleri','HTML rapor indirme']},
+    {name:'Starter',price:9,analyses:20,features:['20 analiz/ay','Dosya yükleme (PDF/DOCX)','Geçmiş analizler']},
+    {name:'Pro',price:29,analyses:100,features:['100 analiz/ay','Claude + GPT-4o','Öncelikli destek'],featured:true},
+    {name:'Unlimited',price:79,analyses:-1,features:['Sınırsız analiz','Tüm modeller','API erişimi']},
+  ];
+  var grid=document.getElementById('planGrid');
+  if(!grid)return;
+  grid.innerHTML=plans.map(function(p){
+    return '<div class="plan-card'+(p.featured?' featured':'')+'">'+
+      (p.featured?'<div class="plan-badge">En Popüler</div>':'')+
+      '<div class="plan-name">'+p.name+'</div>'+
+      '<div class="plan-price">'+(p.price===0?'Ücretsiz':'$'+p.price)+
+      '<span>'+(p.price>0?'/ay':'')+'</span></div>'+
+      '<div class="plan-analyses">'+(p.analyses===-1?'Sınırsız analiz':p.analyses+' analiz/ay')+'</div>'+
+      '<ul class="plan-features">'+p.features.map(function(f){return'<li>'+f+'</li>';}).join('')+'</ul>'+
+      '</div>';
+  }).join('');
+}
 
 </script>
 </body>
