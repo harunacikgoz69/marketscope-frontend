@@ -928,7 +928,7 @@ function saveAnalysis() {
       verdictCol: v.col,
       score: score,
       provider: currentProvider,
-      model: document.getElementById('modelSelect').value
+      model: document.getElementById('modelSel').value
     };
     const history = getHistory();
     history.unshift(entry);
@@ -1063,12 +1063,12 @@ function buildReport() {
   const score=parseScore(decision)||parseScore(report);
 
   document.getElementById('rTitle').textContent=curInfo.name+' — Kapsamlı Analiz Raporu';
-  const prov=currentProvider==='claude'?'Claude ('+document.getElementById('modelSelect').value+')':'OpenAI ('+document.getElementById('modelSelect').value+')';
+  const prov=currentProvider==='claude'?'Claude ('+document.getElementById('modelSel').value+')':'OpenAI ('+document.getElementById('modelSel').value+')';
   document.getElementById('rSub').textContent='MarketScope AI · '+prov+' · '+new Date().toLocaleString('tr-TR');
   const vc=document.getElementById('rVerdict');vc.textContent=v.label;vc.className='vchip '+v.cls;
   if(score){
     document.getElementById('rScore').textContent=score;
-    const f=document.getElementById('rScoreFill');
+    const f=document.getElementById('rFill');
     f.className='score-fill sf-'+v.col;
     setTimeout(()=>f.style.width=score+'%',200);
   }
@@ -1384,7 +1384,7 @@ async function generateWordReport() {
     info: curInfo, results: [...results], fullTexts: [...fullTexts],
     sectionTexts: {...sectionTexts}, verdict: v.label, verdictCol: v.col,
     score: score, provider: currentProvider,
-    model: document.getElementById('modelSelect').value,
+    model: document.getElementById('modelSel').value,
     date: new Date().toLocaleString('tr-TR')
   };
 
@@ -1418,7 +1418,7 @@ async function generatePptxReport() {
     info: curInfo, results: [...results], fullTexts: [...fullTexts],
     sectionTexts: {...sectionTexts}, verdict: v.label, verdictCol: v.col,
     score: score, provider: currentProvider,
-    model: document.getElementById('modelSelect').value,
+    model: document.getElementById('modelSel').value,
     date: new Date().toLocaleString('tr-TR')
   };
 
@@ -1458,7 +1458,7 @@ function exportHTML(){
   var score=parseScore(results[8])||parseScore(results[11])||'—';
   var dt=new Date().toLocaleString('tr-TR');
   var prov=currentProvider==='claude'?'Claude':'OpenAI';
-  var model=document.getElementById('modelSelect').value;
+  var model=document.getElementById('modelSel').value;
   var NL='<br>';
 
   var vc=v.col==='green'?'vg':v.col==='red'?'vr':'vy';
