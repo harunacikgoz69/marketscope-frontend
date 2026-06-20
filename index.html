@@ -555,12 +555,15 @@ let currentUser = null;
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  renderHistory();
   renderPlans();
   setProvider('openai');
   renderPlans();
   if (authToken) {
     await loadUser();
+    await migrateLocalHistory();
+    await renderHistory();
+  } else {
+    renderHistory();
   }
   if (currentUser) {
     showApp();
@@ -655,6 +658,8 @@ async function doLogin() {
     closeAuth();
     showApp();
     toast('✓ Hoş geldiniz!');
+    await migrateLocalHistory();
+    await renderHistory();
   } catch(e){ showAuthMsg('Bağlantı hatası: '+e.message); }
   finally{ btn.disabled=false; btn.textContent='Giriş Yap'; }
 }
@@ -936,7 +941,7 @@ async function startAnalysis(){
     const p7=buildPrompts(curInfo);
     await runAgent(11,p7[11]);updProg(12);
     buildReport();
-    saveAnalysis();
+    await saveAnalysis();
     // Refresh user usage
     await loadUser();
     renderUsageBadge();
@@ -981,7 +986,7 @@ const SECS=[
 const HISTORY_KEY = 'marketscope_history';
 const MAX_HISTORY = 20;
 
-function saveAnalysis() {
+async function saveAnalysis() {
   try {
     const v = parseVerdict(results[11] + results[8]);
     const score = parseScore(results[8]) || parseScore(results[11]);
@@ -1015,25 +1020,47 @@ function getHistory() {
   } catch(e) { return []; }
 }
 
-function loadAnalysis(id) {
-  var history = getHistory();
-  var entry = history.find(function(h){ return h.id === id; });
-  if (!entry) { toast('Analiz bulunamadı'); return; }
+async function loadAnalysis(id) {
+  let entry = null;
+  if (authToken) {
+    try {
+      const r = await apiFetch('/analyses');
+      if (r.ok) {
+        const analyses = await r.json();
+        const found = analyses.find(a => a.id === id);
+        if (found) {
+          entry = {
+            info: found.product_info || {},
+            results: found.results || [],
+            fullTexts: found.full_texts || [],
+            sectionTexts: found.section_texts || {},
+            verdict: found.verdict || '',
+            verdictCol: found.verdict_color || '',
+            score: found.score || 0,
+            provider: found.provider || 'openai',
+            model: found.model || '',
+          };
+        }
+      }
+    } catch(e) { console.error('Cloud loadAnalysis error:', e); }
+  }
+  if (!entry) {
+    const history = getHistory();
+    entry = history.find(function(h){ return String(h.id) === String(id); });
+  }
+  if (!entry) { toast('Analiz bulunamadi'); return; }
 
-  // Restore state
   curInfo = entry.info;
   for(var i=0;i<entry.results.length;i++) results[i]=entry.results[i];
-  for(var i=0;i<entry.fullTexts.length;i++) fullTexts[i]=entry.fullTexts[i];
-  Object.assign(sectionTexts, entry.sectionTexts);
+  for(var i=0;i<(entry.fullTexts||[]).length;i++) fullTexts[i]=entry.fullTexts[i];
+  Object.assign(sectionTexts, entry.sectionTexts||{});
 
-  // Restore form fields
   var fields = {pName:'name',pCat:'cat',pMarket:'market',pBuy:'buy',pSell:'sell',pBiz:'biz',pDesc:'desc'};
-  Object.keys(fields).forEach(function(id){
-    var el=document.getElementById(id);
-    if(el) el.value=entry.info[fields[id]]||'';
+  Object.keys(fields).forEach(function(fid){
+    var el=document.getElementById(fid);
+    if(el) el.value=entry.info[fields[fid]]||'';
   });
 
-  // Restore provider DIRECTLY (skip password check)
   var p = entry.provider || 'openai';
   currentProvider = p;
   var tc=document.getElementById('ptClaude');
@@ -1047,7 +1074,6 @@ function loadAnalysis(id) {
   }
   if(p==='claude') claudeUnlocked=true;
 
-  // Show pipeline
   var pe=document.getElementById('pipelineEl');
   var es=document.getElementById('emptyState');
   var rw=document.getElementById('reportWrap');
@@ -1055,40 +1081,48 @@ function loadAnalysis(id) {
   if(es) es.style.display='none';
   if(rw) rw.classList.remove('show');
 
-  // Restore tiles
   for(var i=0;i<12;i++){
-    var r=results[i];
-    if(r && r!=='[hata]') setTile(i,'done',r);
+    var rv=results[i];
+    if(rv && rv!=='[hata]') setTile(i,'done',rv);
   }
   updProg(12);
-
-  // Build report
   buildReport();
 
-  // Enable download button
   var wb=document.getElementById('wordBtn');
   if(wb){wb.disabled=false;wb.style.opacity='1';wb.style.cursor='pointer';}
 
-  // Close history panel
   var hp=document.getElementById('historyPanel');
   if(hp) hp.classList.remove('show');
 
-  toast('✓ Analiz yüklendi: ' + (entry.info.name||''));
+  toast('\u2713 Analiz y\u00fcklendi: ' + (entry.info.name||''));
 }
 
-function deleteAnalysis(id, event) {
-  event.stopPropagation();
-  const history = getHistory().filter(h => h.id !== id);
+async function deleteAnalysis(id, event) {
+  if(event) event.stopPropagation();
+  if(!confirm('Bu analizi silmek istedi\u011finden emin misin?')) return;
+  if (authToken) {
+    try { await apiFetch('/analyses/' + id, 'DELETE'); } catch(e) {}
+  }
+  const history = getHistory().filter(h => String(h.id) !== String(id));
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  renderHistory();
+  await renderHistory();
   toast('Analiz silindi');
 }
 
-function clearAllHistory() {
-  if (!confirm('Tüm kaydedilmiş analizler silinecek. Emin misiniz?')) return;
+async function clearAllHistory() {
+  if (!confirm('T\u00fcm kaydedilmi\u015f analizler silinecek. Emin misiniz?')) return;
+  if (authToken) {
+    try {
+      const r = await apiFetch('/analyses');
+      if (r.ok) {
+        const analyses = await r.json();
+        for (const a of analyses) await apiFetch('/analyses/' + a.id, 'DELETE');
+      }
+    } catch(e) {}
+  }
   localStorage.removeItem(HISTORY_KEY);
-  renderHistory();
-  toast('Tüm analizler silindi');
+  await renderHistory();
+  toast('T\u00fcm analizler silindi');
 }
 
 function toggleHistory() {
@@ -1097,34 +1131,78 @@ function toggleHistory() {
   renderHistory();
 }
 
-function renderHistory() {
-  const history = getHistory();
+async function renderHistory() {
   const list = document.getElementById('historyList');
   const countEl = document.getElementById('historyCount');
-
-  if (countEl) countEl.textContent = history.length || '';
-
   if (!list) return;
-
-  if (history.length === 0) {
-    list.innerHTML = '<div class="history-empty">Henüz kaydedilmiş analiz yok.<br>Analiz tamamlandığında otomatik kaydedilir.</div>';
+  if (authToken) {
+    list.innerHTML = '<div class="history-empty">Y\u00fckleniyor...</div>';
+    try {
+      const r = await apiFetch('/analyses');
+      if (r.ok) {
+        const analyses = await r.json();
+        if (countEl) countEl.textContent = analyses.length || '';
+        if (!analyses.length) {
+          list.innerHTML = '<div class="history-empty">Hen\u00fcz kaydedilmi\u015f analiz yok.<br>Analiz tamamland\u0131\u011f\u0131nda otomatik kaydedilir.</div>';
+          return;
+        }
+        list.innerHTML = analyses.map(function(a) {
+          var d = new Date(a.created_at).toLocaleString('tr-TR');
+          var col = a.verdict_color || '#94a3b8';
+          var score = a.score ? a.score + '/100' : '\u2014';
+          return '<div class="history-item" onclick="loadAnalysis(\'' + a.id + '\')">'
+            + '<div class="hi-icon">\ud83d\udcca</div>'
+            + '<div class="hi-body">'
+            + '<div class="hi-name">' + (a.product_name || '\u0130simsiz') + '</div>'
+            + '<div class="hi-meta">' + d + ' \u00b7 ' + (a.provider || '') + '</div>'
+            + '</div>'
+            + '<span class="hi-verdict" style="color:' + col + '">' + (a.verdict || '\u2014') + ' \u00b7 ' + score + '</span>'
+            + '<button class="hi-del" onclick="deleteAnalysis(\'' + a.id + '\', event)" title="Sil">\u00d7</button>'
+            + '</div>';
+        }).join('');
+        return;
+      }
+    } catch(e) { console.error('renderHistory cloud error:', e); }
+  }
+  const history = getHistory();
+  if (countEl) countEl.textContent = history.length || '';
+  if (!history.length) {
+    list.innerHTML = '<div class="history-empty">Hen\u00fcz kaydedilmi\u015f analiz yok.<br>Analiz tamamland\u0131\u011f\u0131nda otomatik kaydedilir.</div>';
     return;
   }
-
   list.innerHTML = history.map(function(h) {
     var d = new Date(h.date).toLocaleString('tr-TR');
     var vcls = h.verdictCol === 'green' ? 'hv-green' : h.verdictCol === 'red' ? 'hv-red' : 'hv-yellow';
-    var score = h.score ? h.score + '/100' : '—';
+    var score = h.score ? h.score + '/100' : '\u2014';
     return '<div class="history-item" onclick="loadAnalysis(' + h.id + ')">'
-      + '<div class="hi-icon">📊</div>'
+      + '<div class="hi-icon">\ud83d\udcca</div>'
       + '<div class="hi-body">'
-      + '<div class="hi-name">' + (h.info.name || 'İsimsiz') + '</div>'
-      + '<div class="hi-meta">' + d + ' · ' + (h.info.market || '') + ' · ' + (h.provider || 'claude') + '</div>'
+      + '<div class="hi-name">' + (h.info.name || '\u0130simsiz') + '</div>'
+      + '<div class="hi-meta">' + d + ' \u00b7 ' + (h.info.market || '') + ' \u00b7 ' + (h.provider || 'openai') + '</div>'
       + '</div>'
-      + '<span class="hi-verdict ' + vcls + '">' + (h.verdict || '—') + ' · ' + score + '</span>'
-      + '<button class="hi-del" onclick="deleteAnalysis(' + h.id + ', event)" title="Sil">×</button>'
+      + '<span class="hi-verdict ' + vcls + '">' + (h.verdict || '\u2014') + ' \u00b7 ' + score + '</span>'
+      + '<button class="hi-del" onclick="deleteAnalysis(' + h.id + ', event)" title="Sil">\u00d7</button>'
       + '</div>';
   }).join('');
+}
+
+async function migrateLocalHistory() {
+  if (!authToken) return;
+  if (localStorage.getItem('ms_migrated')) return;
+  const raw = localStorage.getItem(HISTORY_KEY);
+  if (!raw) { localStorage.setItem('ms_migrated', '1'); return; }
+  let local = [];
+  try { local = JSON.parse(raw); } catch(e) { return; }
+  if (!local.length) { localStorage.setItem('ms_migrated', '1'); return; }
+  try {
+    const r = await apiFetch('/analyses/migrate', 'POST', local);
+    if (r.ok) {
+      const res = await r.json();
+      localStorage.setItem('ms_migrated', '1');
+      localStorage.removeItem(HISTORY_KEY);
+      if(res.saved > 0) toast(res.saved + ' analiz buluta aktar\u0131ld\u0131');
+    }
+  } catch(e) { console.warn('Migration ba\u015far\u0131s\u0131z:', e); }
 }
 
 // Init history count on load
