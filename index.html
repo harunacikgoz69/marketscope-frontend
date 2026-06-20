@@ -763,6 +763,7 @@ async function submitClaudePassword() {
 }
 
 function getExt(n){return n.split('.').pop().toLowerCase();}
+const FILE_ICONS={pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',csv:'📊',txt:'📃',png:'🖼',jpg:'🖼',jpeg:'🖼',ppt:'📊',pptx:'📊'};
 function getIcon(n){return FILE_ICONS[getExt(n)]||'📎';}
 function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';}
 function onDragOver(e){e.preventDefault();document.getElementById('fileDrop').classList.add('dragover');}
