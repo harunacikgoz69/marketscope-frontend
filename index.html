@@ -1015,53 +1015,64 @@ function getHistory() {
 }
 
 function loadAnalysis(id) {
-  const history = getHistory();
-  const entry = history.find(h => h.id === id);
+  var history = getHistory();
+  var entry = history.find(function(h){ return h.id === id; });
   if (!entry) { toast('Analiz bulunamadı'); return; }
 
   // Restore state
   curInfo = entry.info;
-  results.splice(0, results.length, ...entry.results);
-  fullTexts.splice(0, fullTexts.length, ...entry.fullTexts);
+  for(var i=0;i<entry.results.length;i++) results[i]=entry.results[i];
+  for(var i=0;i<entry.fullTexts.length;i++) fullTexts[i]=entry.fullTexts[i];
   Object.assign(sectionTexts, entry.sectionTexts);
 
   // Restore form fields
-  document.getElementById('pName').value = entry.info.name || '';
-  document.getElementById('pCat').value = entry.info.cat || '';
-  document.getElementById('pMarket').value = entry.info.market || '';
-  document.getElementById('pBuy').value = entry.info.buy || '';
-  document.getElementById('pSell').value = entry.info.sell || '';
-  document.getElementById('pBiz').value = entry.info.biz || '';
-  document.getElementById('pDesc').value = entry.info.desc || '';
-
-  // Restore provider/model
-  if (entry.provider) {
-    setProvider(entry.provider);
-  }
-
-  // Show pipeline tiles as done
-  document.getElementById('pipelineWrap').classList.add('show');
-  document.getElementById('emptyState').style.display = 'none';
-  document.getElementById('reportWrap').classList.remove('show');
-
-  results.forEach((r, i) => {
-    if (r && r !== '[hata]') {
-      setTile(i, 'done', r);
-    }
+  var fields = {pName:'name',pCat:'cat',pMarket:'market',pBuy:'buy',pSell:'sell',pBiz:'biz',pDesc:'desc'};
+  Object.keys(fields).forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.value=entry.info[fields[id]]||'';
   });
+
+  // Restore provider DIRECTLY (skip password check)
+  var p = entry.provider || 'openai';
+  currentProvider = p;
+  var tc=document.getElementById('ptClaude');
+  var to=document.getElementById('ptOpenAI');
+  if(tc) tc.className='ptab'+(p==='claude'?' active claude':'');
+  if(to) to.className='ptab'+(p==='openai'?' active openai':'');
+  var sel=document.getElementById('modelSel');
+  if(sel){
+    var models=p==='claude'?CLAUDE_MODELS:OPENAI_MODELS;
+    sel.innerHTML=models.map(function(m){return'<option value="'+m.v+'"'+(m.v===entry.model?' selected':'')+'>'+m.l+'</option>';}).join('');
+  }
+  if(p==='claude') claudeUnlocked=true;
+
+  // Show pipeline
+  var pe=document.getElementById('pipelineEl');
+  var es=document.getElementById('emptyState');
+  var rw=document.getElementById('reportWrap');
+  if(pe) pe.classList.add('show');
+  if(es) es.style.display='none';
+  if(rw) rw.classList.remove('show');
+
+  // Restore tiles
+  for(var i=0;i<12;i++){
+    var r=results[i];
+    if(r && r!=='[hata]') setTile(i,'done',r);
+  }
   updProg(12);
 
   // Build report
   buildReport();
 
-  // Enable export
-  const eb = document.getElementById('wordBtn');
-  if (eb) { eb.disabled = false; eb.style.opacity = '1'; eb.style.cursor = 'pointer'; }
+  // Enable download button
+  var wb=document.getElementById('wordBtn');
+  if(wb){wb.disabled=false;wb.style.opacity='1';wb.style.cursor='pointer';}
 
   // Close history panel
-  document.getElementById('historyPanel').classList.remove('show');
+  var hp=document.getElementById('historyPanel');
+  if(hp) hp.classList.remove('show');
 
-  toast('✓ Analiz yüklendi: ' + entry.info.name);
+  toast('✓ Analiz yüklendi: ' + (entry.info.name||''));
 }
 
 function deleteAnalysis(id, event) {
