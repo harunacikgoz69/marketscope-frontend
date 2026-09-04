@@ -347,6 +347,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         <button class="ptab active openai" id="ptOpenAI" onclick="setProvider('openai')">OpenAI</button>
       </div>
       <select class="model-sel" id="modelSel">
+        <option value="gpt-4.1">gpt-4.1</option>
         <option value="gpt-4o">gpt-4o</option>
         <option value="gpt-4o-mini">gpt-4o-mini</option>
         <option value="gpt-4-turbo">gpt-4-turbo</option>
@@ -543,6 +544,18 @@ const API = LOCAL_HOSTS.includes(location.hostname)
 const TOTAL = 12;
 const SYS = `Sen deneyimli bir EMEA bölgesi ürün ticareti ve pazar analisti uzmanısın. Yanıtlarını Türkçe ver. Gerçek piyasa verisi olmadığında "tahminen", "piyasa verilerine göre" ifadelerini kullan. Somut, sayısal, madde madde yaz.`;
 
+// Olcum: kelime hedefi vermek metni sisiriyordu; yapi dayatmak ise ayni modelde
+// tablo satirini 11'den 157'ye cikardi. Nihai rapor (ajan 11) kendi formatini
+// dayattigi icin ona eklenmez.
+const YAPI = `
+
+BİÇİM KURALLARI:
+- Bu bölümde en az 2 markdown tablosu kullan; her tablo en az 6 satır olsun.
+- Her hücrede tek bir baz rakam ver, parantez içinde aralık: örneğin 25 USD (18-35). Sadece aralık verip geçme.
+- Şu alanları doldur: GTİP/HS kodu, menşe ülke ve şehir, MOQ, lead time (gün), kur varsayımı, konteyner başına adet.
+- Her rakamın yanına hangi varsayımdan geldiğini yaz.
+- "Tahminen değişir", "duruma göre" gibi boş ifadeler kullanma.`;
+
 let currentProvider = 'openai';
 let claudeUnlocked = false;
 let results = Array(TOTAL).fill('');
@@ -552,6 +565,7 @@ let sectionTexts = {};
 let curInfo = {};
 let doneN = 0;
 let running = false;
+let kesikBolumler = [];   // tavana carpip yarim kalan bolumlerin indeksleri
 let authToken = localStorage.getItem('ms_token');
 let currentUser = null;
 
@@ -712,6 +726,7 @@ const CLAUDE_MODELS = [
   {v:'claude-haiku-4-5-20251001',l:'claude-haiku-4-5'},
 ];
 const OPENAI_MODELS = [
+  {v:'gpt-4.1',l:'gpt-4.1'},
   {v:'gpt-4o',l:'gpt-4o'},{v:'gpt-4o-mini',l:'gpt-4o-mini'},
   {v:'gpt-4-turbo',l:'gpt-4-turbo'},
 ];
@@ -877,7 +892,7 @@ function buildPrompts(info){
     `${SYS}\n\nGörev: RİSK MATRİSİ\n\nKarar: ${R[8]}\nSav: ${R[6].slice(0,200)} | Eleş: ${R[7].slice(0,200)}\n\nEn az 7 risk. Her biri: başlık · kategori · olasılık(Y/O/D) · etki(K/Ö/D) · mitigasyon\nSon satır: BİRLEŞİK RİSK: [Yüksek/Orta/Düşük] | Öncelikli aksiyon: [1 cümle]`,
     `${SYS}\n\nGörev: BÖLÜM G — STRATEJİK UYUM\n\nPAZAR: ${R[0]}\nREKABET: ${R[1]}\nFİYAT: ${R[4]}\nFİNANSAL: ${R[5]}\n\n${base}\n\n1. SWOT (4 kutu, 3+ madde her biri)\n2. Portföy uyumu ve sinerji\n3. EMEA ölçeklenme potansiyeli\n4. Private Label / marka yatırımı — ne zaman?\n5. Stratejik tavsiye\nSon satır: STRATEJİK UYUM SKORU: X/5`,
     `${SYS}\n\nGörev: NİHAİ RAPOR — A-H bölümlerini sentezle (özet format, bölüm başlıklarını AYNEN kullan):\n\n## BÖLÜM A — PAZAR ANALİZİ\n[3-4 cümle özet]\n\n## BÖLÜM B — REKABET ANALİZİ\n[3-4 cümle]\n\n## BÖLÜM C — TEDARİKÇİ ANALİZİ\n[3-4 cümle]\n\n## BÖLÜM D — FİYATLANDIRMA\n[3-4 cümle]\n\n## BÖLÜM E — FİNANSAL PROJEKSİYON\n[3-4 cümle]\n\n## BÖLÜM F — UYUMLULUK\n[3-4 cümle]\n\n## BÖLÜM G — STRATEJİK UYUM\n[3-4 cümle]\n\n## BÖLÜM H — PUANLAMA & KARAR\n${R[8]}\n\nKaynak: A=${R[0].slice(0,200)} B=${R[1].slice(0,200)} C=${R[2].slice(0,150)} D=${R[4].slice(0,200)} E=${R[5].slice(0,200)} F=${R[3].slice(0,150)} G=${R[10].slice(0,200)}`
-  ];
+  ].map((p, i) => i === 11 ? p : p + YAPI);
 }
 
 // ── MAIN ANALYSIS FLOW ────────────────────────────────────────────────────────
@@ -887,7 +902,7 @@ async function startAnalysis(){
   if(!name){toast('⚠ Ürün adı zorunlu');return;}
   if(!document.getElementById('pCat').value){toast('⚠ Kategori seçin');return;}
   if(running)return;
-  running=true;results=Array(TOTAL).fill('');fullTexts=Array(TOTAL).fill('');doneN=0;sectionTexts={};
+  running=true;results=Array(TOTAL).fill('');fullTexts=Array(TOTAL).fill('');doneN=0;sectionTexts={};kesikBolumler=[];
 
   curInfo={
     name,cat:document.getElementById('pCat').value,
@@ -914,7 +929,7 @@ async function startAnalysis(){
       const r=await apiFetch('/analyze','POST',{
         provider:currentProvider,
         model:document.getElementById('modelSel').value,
-        prompt:SYS+'\n\n'+prompt,
+        prompt:prompt,
         agent_index:i,
         file_contents:i===0?filePayload:[]
       });
@@ -924,6 +939,10 @@ async function startAnalysis(){
         throw new Error(e.detail||'HTTP '+r.status);
       }
       const d=await r.json();
+      // Bos yanit sessizce kaydedilmesin: akil yuruten modeller butceyi
+      // dusunmeye harcayip hic metin dondurmeyebiliyor.
+      if(d.empty) throw new Error('Model bu bölüm için boş yanıt döndü');
+      if(d.truncated) kesikBolumler.push(i);
       results[i]=d.text;setTile(i,'done',d.text);return d.text;
     }catch(e){setTile(i,'error',e.message);results[i]='[hata]';throw e;}
   }
@@ -947,7 +966,12 @@ async function startAnalysis(){
     // Refresh user usage
     await loadUser();
     renderUsageBadge();
-    toast('✓ Analiz tamamlandı');
+    if(kesikBolumler.length){
+      const adlar = kesikBolumler.map(i => (SECS.find(x => x.agentIdx === i) || {}).title || ('Ajan ' + (i+1)));
+      toast('⚠ ' + kesikBolumler.length + ' bölüm uzunluk sınırına takılıp yarım kaldı: ' + adlar.join(', '), 7000);
+    } else {
+      toast('✓ Analiz tamamlandı');
+    }
   }catch(e){toast('Hata: '+e.message,5000);}
 
   running=false;
