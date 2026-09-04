@@ -567,6 +567,8 @@ let doneN = 0;
 let running = false;
 let kesikBolumler = [];   // tavana carpip yarim kalan bolumlerin indeksleri
 let authToken = localStorage.getItem('ms_token');
+let refreshToken = localStorage.getItem('ms_refresh');
+let yenilemeSozu = null;   // ayni anda tek yenileme istegi gitsin
 let currentUser = null;
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -596,12 +598,10 @@ async function loadUser() {
       renderNav();
       renderUsageBadge();
     } else {
-      authToken = null;
-      localStorage.removeItem('ms_token');
+      oturumuTemizle();
     }
   } catch(e) {
-    authToken = null;
-    localStorage.removeItem('ms_token');
+    oturumuTemizle();
   }
 }
 
@@ -666,6 +666,10 @@ async function doLogin() {
     if(!r.ok){ showAuthMsg(d.detail||'Giriş başarısız'); return; }
     authToken = d.access_token;
     localStorage.setItem('ms_token', authToken);
+    if(d.refresh_token){
+      refreshToken = d.refresh_token;
+      localStorage.setItem('ms_refresh', refreshToken);
+    }
     currentUser = {
       id: d.user.id, email: d.user.email, name: d.user.name,
       plan:'free', analyses_used:0, analyses_limit:3, analyses_remaining:3
@@ -699,8 +703,9 @@ async function doRegister() {
 }
 
 async function doLogout() {
-  authToken=null; currentUser=null;
+  authToken=null; refreshToken=null; currentUser=null;
   localStorage.removeItem('ms_token');
+  localStorage.removeItem('ms_refresh');
   document.getElementById('navRight').innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="openAuth('login')">Giriş Yap</button>
     <button class="btn btn-primary btn-sm" onclick="openAuth('register')">Ücretsiz Başla</button>`;
@@ -709,14 +714,61 @@ async function doLogout() {
 }
 
 // ── API FETCH ─────────────────────────────────────────────────────────────────
-async function apiFetch(path, method='GET', body=null) {
+function oturumuTemizle(){
+  authToken = null; refreshToken = null;
+  localStorage.removeItem('ms_token');
+  localStorage.removeItem('ms_refresh');
+}
+
+// Access token ~1 saatte doluyor. Tek bir yenileme istegi paylasilir; 12 ajan
+// paralel calisirken hepsi ayni anda 401 alirsa 12 kere yenilemeye gitmesin.
+function tokeniYenile(){
+  if(yenilemeSozu) return yenilemeSozu;
+  if(!refreshToken) return Promise.resolve(false);
+  yenilemeSozu = (async () => {
+    try{
+      const r = await fetch(API+'/auth/refresh', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({refresh_token: refreshToken})
+      });
+      if(!r.ok) return false;
+      const d = await r.json();
+      if(!d.access_token) return false;
+      authToken = d.access_token;
+      localStorage.setItem('ms_token', authToken);
+      if(d.refresh_token){
+        refreshToken = d.refresh_token;
+        localStorage.setItem('ms_refresh', refreshToken);
+      }
+      return true;
+    }catch(e){
+      console.warn('Token yenilenemedi:', e);
+      return false;
+    }finally{
+      yenilemeSozu = null;
+    }
+  })();
+  return yenilemeSozu;
+}
+
+const KIMLIK_YOLLARI = ['/auth/login', '/auth/register', '/auth/refresh'];
+
+async function apiFetch(path, method='GET', body=null, yenidenDenendi=false) {
   const opts = {
     method,
     headers: {'Content-Type':'application/json'},
   };
   if(authToken) opts.headers['Authorization'] = `Bearer ${authToken}`;
   if(body) opts.body = JSON.stringify(body);
-  return fetch(API+path, opts);
+  const r = await fetch(API+path, opts);
+
+  // Oturum dolduysa sessizce yenile ve istegi bir kez tekrarla.
+  if(r.status === 401 && !yenidenDenendi && refreshToken && !KIMLIK_YOLLARI.includes(path)){
+    if(await tokeniYenile()) return apiFetch(path, method, body, true);
+    oturumuTemizle();
+  }
+  return r;
 }
 
 // ── PROVIDER / MODEL ──────────────────────────────────────────────────────────
