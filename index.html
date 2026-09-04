@@ -350,7 +350,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         <option value="gpt-4o">gpt-4o</option>
         <option value="gpt-4o-mini">gpt-4o-mini</option>
         <option value="gpt-4-turbo">gpt-4-turbo</option>
-        <option value="o1-mini">o1-mini</option>
       </select>
       <div class="provider-info" id="usageBadge"></div>
     </div>
@@ -535,7 +534,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const API = 'https://marketscope-api-production.up.railway.app';
+const LOCAL_HOSTS = ['localhost', '127.0.0.1'];
+const API = LOCAL_HOSTS.includes(location.hostname)
+  ? 'http://127.0.0.1:8000'
+  : 'https://marketscope-api-production.up.railway.app';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 const TOTAL = 12;
@@ -711,7 +713,7 @@ const CLAUDE_MODELS = [
 ];
 const OPENAI_MODELS = [
   {v:'gpt-4o',l:'gpt-4o'},{v:'gpt-4o-mini',l:'gpt-4o-mini'},
-  {v:'gpt-4-turbo',l:'gpt-4-turbo'},{v:'o1-mini',l:'o1-mini'},
+  {v:'gpt-4-turbo',l:'gpt-4-turbo'},
 ];
 function checkKey(){}
 function setProvider(p) {
@@ -987,28 +989,55 @@ const HISTORY_KEY = 'marketscope_history';
 const MAX_HISTORY = 20;
 
 async function saveAnalysis() {
+  const v = parseVerdict(results[11] + results[8]);
+  const score = parseScore(results[8]) || parseScore(results[11]);
+  const entry = {
+    id: Date.now(),
+    date: new Date().toISOString(),
+    info: JSON.parse(JSON.stringify(curInfo)),
+    results: [...results],
+    fullTexts: [...fullTexts],
+    sectionTexts: JSON.parse(JSON.stringify(sectionTexts)),
+    verdict: v.label,
+    verdictCol: v.col,
+    score: score,
+    provider: currentProvider,
+    model: document.getElementById('modelSel').value
+  };
+
+  // Once cloud'a kaydet; basarisiz olursa localStorage'a dus.
+  if (authToken) {
+    try {
+      const r = await apiFetch('/analyses', 'POST', {
+        product_name: entry.info.name || '',
+        product_info: entry.info,
+        provider: entry.provider,
+        model: entry.model,
+        verdict: entry.verdict,
+        verdict_color: entry.verdictCol,
+        score: parseInt(score, 10) || 0,
+        results: entry.results,
+        full_texts: entry.fullTexts,
+        section_texts: entry.sectionTexts
+      });
+      if (r.ok) {
+        await renderHistory();
+        toast('✓ Analiz kaydedildi');
+        return;
+      }
+      console.warn('Cloud save failed:', r.status, await r.text().catch(() => ''));
+    } catch(e) {
+      console.warn('Cloud save error:', e);
+    }
+  }
+
   try {
-    const v = parseVerdict(results[11] + results[8]);
-    const score = parseScore(results[8]) || parseScore(results[11]);
-    const entry = {
-      id: Date.now(),
-      date: new Date().toISOString(),
-      info: JSON.parse(JSON.stringify(curInfo)),
-      results: [...results],
-      fullTexts: [...fullTexts],
-      sectionTexts: JSON.parse(JSON.stringify(sectionTexts)),
-      verdict: v.label,
-      verdictCol: v.col,
-      score: score,
-      provider: currentProvider,
-      model: document.getElementById('modelSel').value
-    };
     const history = getHistory();
     history.unshift(entry);
     if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    renderHistory();
-    toast('✓ Analiz kaydedildi');
+    await renderHistory();
+    toast('✓ Analiz kaydedildi (yerel)');
   } catch(e) {
     console.error('Save error:', e);
   }
@@ -1194,15 +1223,37 @@ async function migrateLocalHistory() {
   let local = [];
   try { local = JSON.parse(raw); } catch(e) { return; }
   if (!local.length) { localStorage.setItem('ms_migrated', '1'); return; }
-  try {
-    const r = await apiFetch('/analyses/migrate', 'POST', local);
-    if (r.ok) {
-      const res = await r.json();
-      localStorage.setItem('ms_migrated', '1');
-      localStorage.removeItem(HISTORY_KEY);
-      if(res.saved > 0) toast(res.saved + ' analiz buluta aktar\u0131ld\u0131');
+
+  // Hepsini tek istekte gondermek govdeyi ~700KB yapip baglantiyi koparıyordu
+  // (ERR_HTTP2_PROTOCOL_ERROR). Kayit basina bir istek at.
+  let saved = 0, errors = 0;
+  for (const item of local) {
+    try {
+      const r = await apiFetch('/analyses/migrate', 'POST', [item]);
+      if (r.ok) {
+        const res = await r.json();
+        saved += res.saved || 0;
+        errors += res.errors || 0;
+      } else {
+        errors++;
+        console.warn('Migration kaydi reddedildi:', r.status);
+      }
+    } catch(e) {
+      errors++;
+      console.warn('Migration kaydi gonderilemedi:', e);
     }
-  } catch(e) { console.warn('Migration ba\u015far\u0131s\u0131z:', e); }
+  }
+
+  // Her durumda isaretle: kismi basarisizlikta tekrar denenirse kopya olusur.
+  localStorage.setItem('ms_migrated', '1');
+  if (errors) {
+    // Yerel kopya yerinde kaliyor -> veri kaybi yok.
+    console.warn('Migration eksik: saved=' + saved + ' errors=' + errors + ' - yerel gecmis korunuyor');
+    toast(saved + '/' + local.length + ' analiz aktarıldı, kalanı yerelde');
+  } else {
+    localStorage.removeItem(HISTORY_KEY);
+    if (saved > 0) toast(saved + ' analiz buluta aktarıldı');
+  }
 }
 
 // Init history count on load
