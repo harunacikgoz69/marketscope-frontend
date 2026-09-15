@@ -1031,7 +1031,24 @@ async function startAnalysis(){
 }
 
 // ── REPORT ────────────────────────────────────────────────────────────────────
+// Karar etiketi: puanlama ajani bazen tam kelime yerine "Red"/"Ret" yaziyor.
+function kararEtiketi(s){
+  const u = s.toLocaleUpperCase('tr-TR');
+  const tek = w => new RegExp('(?<![A-ZÇĞİÖŞÜ])' + w + '(?![A-ZÇĞİÖŞÜ])').test(u);
+  if(/REDDED/.test(u) || tek('RED') || tek('RET')) return {label:'❌ Reddedildi',cls:'v-red',col:'red'};
+  if(/ERTELE/.test(u)) return {label:'⏸ Ertelendi',cls:'v-yellow',col:'yellow'};
+  if(/KOŞULLU|KOSULLU/.test(u)) return {label:'⚡ Koşullu Onay',cls:'v-yellow',col:'yellow'};
+  if(/ONAYL/.test(u) || tek('ONAY') || tek('KABUL')) return {label:'✅ Onayli',cls:'v-green',col:'green'};
+  return null;
+}
 function parseVerdict(t){
+  // Once acik "KARAR:" satirina bak. Cagiranlar (nihai rapor + puanlama) birlesimini
+  // gonderiyor; puanlama ajani sonda oldugu icin son eslesme esas alinir.
+  const satirlar = [...(t||'').matchAll(/KARAR\s*\**\s*[:：]\s*\**\s*([^\n]{1,60})/gi)];
+  for(let i = satirlar.length - 1; i >= 0; i--){
+    const e = kararEtiketi(satirlar[i][1]);
+    if(e) return e;
+  }
   const u=(t||'').toUpperCase();
   if(u.includes('REDDEDİLDİ')||u.includes('REDDEDILDI'))return{label:'❌ Reddedildi',cls:'v-red',col:'red'};
   if(u.includes('ERTELENDİ')||u.includes('ERTELENDI'))return{label:'⏸ Ertelendi',cls:'v-yellow',col:'yellow'};
