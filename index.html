@@ -405,7 +405,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         </div>
       </div>
       <div class="form-actions">
-        <span class="form-hint" id="formHint">* Zorunlu · 12 ajan · ~3-4 dakika · A-H bölümleri</span>
+        <span class="form-hint" id="formHint">* Zorunlu · 14 ajan · GPT ~3 dk, Claude ~20-25 dk · A-H bölümleri</span>
         <button class="btn btn-primary btn-lg" id="startBtn" onclick="startAnalysis()">
           ▶ Analizi Başlat
         </button>
@@ -428,8 +428,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 </div>
 <div class="pipeline" id="pipelineEl">
       <div class="pl-head">
-        <div class="pl-title">AI Analiz Akışı — 12 Ajan</div>
-        <div class="pl-prog"><span class="prog-text" id="progText">0 / 12</span><div class="prog-bar"><div class="prog-fill" id="progFill"></div></div></div>
+        <div class="pl-title">AI Analiz Akışı — 14 Ajan</div>
+        <div class="pl-prog"><span class="prog-text" id="progText">0 / 14</span><div class="prog-bar"><div class="prog-fill" id="progFill"></div></div></div>
+      </div>
+      <div class="phase-block">
+        <div class="phase-lbl">Faz 0 — Ortak Veri</div>
+        <div class="pg" style="grid-template-columns:1fr">
+          <div class="atile" id="a12"><div class="atop"><div><div class="aname">Temel Varsayımlar</div><div class="arole">FOB · Konteyner · GTİP · Gümrük/KDV · Kur — tüm ajanlar bunu kullanır</div></div><div class="astatus idle" id="st12">—</div></div><div class="aout" id="out12"></div><button class="aexpand" id="exp12" style="display:none" onclick="xp(12)">daha fazla ↓</button></div>
+        </div>
       </div>
       <div class="phase-block">
         <div class="phase-lbl">Faz 1 — Bilgi Toplama (Paralel)</div>
@@ -458,6 +464,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
         <div class="pg g2" style="margin-top:7px">
           <div class="atile" id="a10"><div class="atop"><div><div class="aname">Stratejik Uyum (G)</div><div class="arole">SWOT · Şirket uyumu</div></div><div class="astatus idle" id="st10">—</div></div><div class="aout" id="out10"></div><button class="aexpand" id="exp10" style="display:none" onclick="xp(10)">daha fazla ↓</button></div>
           <div class="atile" id="a11"><div class="atop"><div><div class="aname">Rapor Sentezi</div><div class="arole">A-H bölümleri · YK özeti</div></div><div class="astatus idle" id="st11">—</div></div><div class="aout" id="out11"></div><button class="aexpand" id="exp11" style="display:none" onclick="xp(11)">daha fazla ↓</button></div>
+        </div>
+      </div>
+      <div class="phase-block">
+        <div class="phase-lbl">Faz 4 — Denetim</div>
+        <div class="pg" style="grid-template-columns:1fr">
+          <div class="atile" id="a13"><div class="atop"><div><div class="aname">Doğrulama</div><div class="arole">Bölümler arası çelişki · Aritmetik · Şüpheli iddia · Güven notu</div></div><div class="astatus idle" id="st13">—</div></div><div class="aout" id="out13"></div><button class="aexpand" id="exp13" style="display:none" onclick="xp(13)">daha fazla ↓</button></div>
         </div>
       </div>
     </div>
@@ -543,7 +555,11 @@ const API = LOCAL_HOSTS.includes(location.hostname)
   : 'https://marketscope-api-production.up.railway.app';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-const TOTAL = 12;
+const TOTAL = 14;
+// Sonradan eklenen ajanlar dizinin SONUNA kondu: 0-11 indeksleri SECS, rapor export'u ve
+// kayitli analizlerle uyumlu kalsin. Eski kayitlarda 12 ve 13 yok.
+const VARSAYIM = 12, DOGRULAMA = 13;
+const AJAN_ADLARI = {12: 'Temel Varsayımlar', 13: 'Doğrulama', 6: 'Savunucu', 7: 'Eleştirmen', 9: 'Risk Matrisi', 11: 'Rapor Sentezi'};
 const SYS = `Sen deneyimli bir EMEA bölgesi ürün ticareti ve pazar analisti uzmanısın. Yanıtlarını Türkçe ver. Gerçek piyasa verisi olmadığında "tahminen", "piyasa verilerine göre" ifadelerini kullan. Somut, sayısal, madde madde yaz.`;
 
 // Olcum: kelime hedefi vermek metni sisiriyordu; yapi dayatmak ise ayni modelde
@@ -554,8 +570,8 @@ const YAPI = `
 BİÇİM KURALLARI:
 - Bu bölümde en az 2 markdown tablosu kullan; her tablo en az 6 satır olsun.
 - Her hücrede tek bir baz rakam ver, parantez içinde aralık: örneğin 25 USD (18-35). Sadece aralık verip geçme.
-- Şu alanları doldur: GTİP/HS kodu, menşe ülke ve şehir, MOQ, lead time (gün), kur varsayımı, konteyner başına adet.
-- Her rakamın yanına hangi varsayımdan geldiğini yaz.
+- GTİP, FOB, MOQ, konteyner adedi, gümrük/KDV ve kur için TEMEL VARSAYIMLAR tablosundaki değerleri kullan; o tabloyu yeniden yazma, bölümüne özgü yeni tablolar üret.
+- Her rakamın yanına hangi varsayımdan geldiğini yaz. Hesap yapıyorsan formülü göster ve aritmetiği kontrol et.
 - "Tahminen değişir", "duruma göre" gibi boş ifadeler kullanma.`;
 
 let currentProvider = 'openai';
@@ -933,6 +949,12 @@ function buildPrompts(info){
   const fileCtx=uploadedFiles.filter(f=>f.content&&!f.isImage).map((f,i)=>`\n[Dosya ${i+1}: ${f.name}]\n${f.content.slice(0,8000)}`).join('\n');
   const base=`Ürün: ${info.name}\nKategori: ${info.cat}\nHedef Pazar: ${info.market}\nAlış: ${info.buy||'bilinmiyor'} | Satış: ${info.sell||'bilinmiyor'}\nİş Modeli: ${info.biz}\nEk Bilgi: ${info.desc||'—'}${fileCtx?'\n\n=== YÜKLENEN DOSYALAR ===\n'+fileCtx+'\n=== DOSYA SONU ===':''}`;
   const R=results;
+  const tarih=new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'});
+  // Ortak veri: her ajan temel rakamlari kendi uydurunca ayni urun icin bolumler arasi
+  // 5 farkli konteyner adedi, 3 farkli FOB cikiyordu (olcum, 15 Eylul 2026).
+  const V = R[VARSAYIM] && R[VARSAYIM]!=='[hata]'
+    ? `\n\nTEMEL VARSAYIMLAR (tüm ekip için ortak veri — AYNEN kullan; farklı bir değer kullanman gerekiyorsa satırı "VARSAYIM SAPMASI:" diye başlatıp gerekçesini yaz):\n${R[VARSAYIM]}`
+    : '';
   return [
     `${SYS}\n\nGörev: BÖLÜM A — PAZAR ANALİZİ\n\n${base}\n\n1. Türkiye/Avrupa/Orta Doğu: pazar büyüklüğü ($M) ve CAGR\n2. TAM→SAM→SOM (sayısal)\n3. Segmentasyon (3 segment, büyüklük+alıcı)\n4. Büyüme katalizörleri (4 madde)\n5. Baskılar ve riskler (3 madde)\n6. Hedef müşteri profili\nSon satır: PAZAR SKORU: X/5`,
     `${SYS}\n\nGörev: BÖLÜM B — REKABET ANALİZİ\n\n${base}\n\n1. Ana rakipler (5+): isim·menşe·fiyat·güçlü/zayıf\n2. Konumlandırma haritası: Premium/Mid/Budget\n3. Giriş engelleri: marka·sertifika·kanal\n4. Farklılaşma matrisi\n5. Segment boşluğu\nSon satır: REKABET SKORU: X/5`,
@@ -945,8 +967,12 @@ function buildPrompts(info){
     `${SYS}\n\nGörev: BÖLÜM H — AĞIRLIKLI PUANLAMA & KARAR\n\nSAVUNUCU: ${R[6]}\nELEŞTİRMEN: ${R[7]}\nTüm veri: ${R[0].slice(0,300)}|${R[1].slice(0,200)}|${R[4].slice(0,200)}|${R[5].slice(0,200)}\n\n8 kriteri 1-5 puan (ağırlıklar: Pazar%20·Marj%20·Rekabet%15·Tedarik%15·Sertifika%10·Strateji%10·Operasyonel%5·ROI%5):\n\n| Kriter | Ağırlık | Puan | Ağırlıklı |\n|---|---|---|---|\n[her kriter için satır]\n| **TOPLAM** | **%100** | — | **XX/100** |\n\nTOPLAM PUAN: XX/100\nKARAR: [Onayli/Koşullu Onay/Ertelendi/Reddedildi]\nGEREKÇE: [2 cümle]\nAKSİYON PLANI:\n1. [aksiyon — sorumlu — süre]\n2. [aksiyon — sorumlu — süre]\n3. [aksiyon — sorumlu — süre]\n4. [aksiyon — sorumlu — süre]`,
     `${SYS}\n\nGörev: RİSK MATRİSİ\n\nKarar: ${R[8]}\nSav: ${R[6].slice(0,200)} | Eleş: ${R[7].slice(0,200)}\n\nEn az 7 risk. Her biri: başlık · kategori · olasılık(Y/O/D) · etki(K/Ö/D) · mitigasyon\nSon satır: BİRLEŞİK RİSK: [Yüksek/Orta/Düşük] | Öncelikli aksiyon: [1 cümle]`,
     `${SYS}\n\nGörev: BÖLÜM G — STRATEJİK UYUM\n\nPAZAR: ${R[0]}\nREKABET: ${R[1]}\nFİYAT: ${R[4]}\nFİNANSAL: ${R[5]}\n\n${base}\n\n1. SWOT (4 kutu, 3+ madde her biri)\n2. Portföy uyumu ve sinerji\n3. EMEA ölçeklenme potansiyeli\n4. Private Label / marka yatırımı — ne zaman?\n5. Stratejik tavsiye\nSon satır: STRATEJİK UYUM SKORU: X/5`,
-    `${SYS}\n\nGörev: NİHAİ RAPOR — A-H bölümlerini sentezle (özet format, bölüm başlıklarını AYNEN kullan):\n\n## BÖLÜM A — PAZAR ANALİZİ\n[3-4 cümle özet]\n\n## BÖLÜM B — REKABET ANALİZİ\n[3-4 cümle]\n\n## BÖLÜM C — TEDARİKÇİ ANALİZİ\n[3-4 cümle]\n\n## BÖLÜM D — FİYATLANDIRMA\n[3-4 cümle]\n\n## BÖLÜM E — FİNANSAL PROJEKSİYON\n[3-4 cümle]\n\n## BÖLÜM F — UYUMLULUK\n[3-4 cümle]\n\n## BÖLÜM G — STRATEJİK UYUM\n[3-4 cümle]\n\n## BÖLÜM H — PUANLAMA & KARAR\n${R[8]}\n\nKaynak: A=${R[0].slice(0,200)} B=${R[1].slice(0,200)} C=${R[2].slice(0,150)} D=${R[4].slice(0,200)} E=${R[5].slice(0,200)} F=${R[3].slice(0,150)} G=${R[10].slice(0,200)}`
-  ].map((p, i) => i === 11 ? p : p + YAPI);
+    `${SYS}\n\nGörev: NİHAİ RAPOR — A-H bölümlerini sentezle (özet format, bölüm başlıklarını AYNEN kullan):\n\n## BÖLÜM A — PAZAR ANALİZİ\n[3-4 cümle özet]\n\n## BÖLÜM B — REKABET ANALİZİ\n[3-4 cümle]\n\n## BÖLÜM C — TEDARİKÇİ ANALİZİ\n[3-4 cümle]\n\n## BÖLÜM D — FİYATLANDIRMA\n[3-4 cümle]\n\n## BÖLÜM E — FİNANSAL PROJEKSİYON\n[3-4 cümle]\n\n## BÖLÜM F — UYUMLULUK\n[3-4 cümle]\n\n## BÖLÜM G — STRATEJİK UYUM\n[3-4 cümle]\n\n## BÖLÜM H — PUANLAMA & KARAR\n${R[8]}\n\nKaynak: A=${R[0].slice(0,200)} B=${R[1].slice(0,200)} C=${R[2].slice(0,150)} D=${R[4].slice(0,200)} E=${R[5].slice(0,200)} F=${R[3].slice(0,150)} G=${R[10].slice(0,200)}`,
+
+    `${SYS}\n\nGörev: TEMEL VARSAYIMLAR — analiz ekibinin diğer tüm üyeleri senin tablonu ortak veri olarak kullanacak. Burada yapılan hata bütün rapora yayılır; bu yüzden kesinlik değil doğruluk öncelikli.\nRapor tarihi: ${tarih}\n\n${base}\n\nKurallar:\n- "Baz değer" sütununa TEK bir sayı yaz (ör. 370), asla aralık yazma; aralığı "Aralık" sütununa yaz. Diğer ajanlar hesaplarında yalnızca baz değeri kullanacak.\n- Ürün birden çok varyantta geliyorsa (ör. 1 kWh ve 2 kWh) tek bir baz varyant seç ve ilk satırda belirt; tüm satırlar o varyant içindir.\n- Emin olmadığın bilgiyi "belirsiz" diye işaretle; kesinmiş gibi uydurma. Şirket anlaşması, sirküler numarası gibi doğrulayamayacağın iddialar yazma.\n- Hesap gerektiren satırlarda formülü göster ve aritmetiği kontrol et. Konteyner adedi = kullanılabilir hacim ÷ koli hacmi; ardından yük ağırlığı sınırını da kontrol et, küçük olanı al.\n- Türkiye KDV genel oranı %20'dir (Temmuz 2023'ten beri). Gümrük maliyetini hesaplarken KDV'yi maliyete ekleme, ayrı göster.\n- Kur ve fiyatlarda rapor tarihine en yakın değeri kullan; eski yıla ait veri kullanıyorsan yılını yaz.\n\nŞu tabloyu doldur:\n| Parametre | Baz değer | Aralık | Birim | Dayanak / hesap |\n|---|---|---|---|---|\n0. Baz varyant (analizin esas aldığı tek model/kapasite)\n1. Ürün teknik tanımı (kapasite, güç, boyut vb. — ürüne uygun olanlar, her biri ayrı satır)\n2. Koli ölçüsü ve brüt ağırlık\n3. FOB birim fiyat\n4. MOQ\n5. Üretim + sevkiyat süresi\n6. 20' konteyner başına adet\n7. 40'HQ konteyner başına adet\n8. Navlun (ana rota, konteyner başına)\n9. GTİP/HS kodu (kesin değilse aday kodlar ve belirsizlik notu)\n10. Türkiye gümrük vergisi ve ilave gümrük vergisi\n11. Türkiye KDV\n12. AB gümrük vergisi\n13. Kur varsayımı (USD/TRY, EUR/USD) ve tarihi\n14. Hedef perakende satış fiyatı aralığı\n15. Zorunlu belgeler ve sertifikalar (kısa liste)\n\nSon satır: VARSAYIM GÜVENİ: [Yüksek/Orta/Düşük]`,
+
+    `${SYS}\n\nGörev: DOĞRULAMA VE TUTARLILIK DENETİMİ. Kıdemli bir denetçi gibi davran: yeni analiz yazma, raporun hatalarını bul. Karar verici bu rapora dayanarak para harcayacak.\nRapor tarihi: ${tarih}\n\n${base}\n\n=== TEMEL VARSAYIMLAR ===\n${R[VARSAYIM]||'(üretilemedi)'}\n\n=== A — PAZAR ===\n${R[0]}\n\n=== B — REKABET ===\n${R[1]}\n\n=== C — TEDARİK ===\n${R[2]}\n\n=== F — UYUMLULUK ===\n${R[3]}\n\n=== D — FİYATLANDIRMA ===\n${R[4]}\n\n=== E — FİNANSAL ===\n${R[5]}\n\n=== SAVUNUCU ===\n${R[6]}\n\n=== ELEŞTİRMEN ===\n${R[7]}\n\n=== H — PUANLAMA & KARAR ===\n${R[8]}\n\n=== RİSK MATRİSİ ===\n${R[9]}\n\n=== G — STRATEJİK UYUM ===\n${R[10]}\n\nKontrol et:\n1. Temel varsayımlarla çelişen rakamlar (FOB, konteyner adedi, gümrük/KDV, kur, satış fiyatı). Gerekçeli "VARSAYIM SAPMASI" satırları hata değildir.\n2. Bölümler arası çelişkiler: aynı büyüklük farklı bölümlerde farklı mı?\n3. Aritmetik hatalar: hesapları kendin yeniden yap.\n4. Doğrulanması gereken ya da uydurma olabilecek spesifik iddialar: yönetmelik/sirküler numaraları, şirket anlaşmaları, rakip ürünlerin teknik özellikleri.\n5. Karar ve puan, bulgularla uyumlu mu?\n\nÇıktı:\n| # | Tür | Bölüm | Rapordaki ifade | Sorun | Önerilen düzeltme |\n|---|---|---|---|---|---|\nEn önemli en fazla 12 bulgu, önem sırasına göre. Emin olmadığın bulguyu "doğrulanmalı" diye yaz. Hata bulamazsan uydurma, "önemli tutarsızlık bulunmadı" yaz.\n\nSon satır: GÜVEN NOTU: [Yüksek/Orta/Düşük] — [rapora ne kadar güvenilebileceği ve karar öncesi mutlaka doğrulanması gereken 3 şey, tek paragraf]`
+  ].map((p, i) => i <= 10 ? p + V + YAPI : p);
 }
 
 // ── MAIN ANALYSIS FLOW ────────────────────────────────────────────────────────
@@ -984,8 +1010,10 @@ async function startAnalysis(){
         provider:currentProvider,
         model:document.getElementById('modelSel').value,
         prompt:prompt,
-        agent_index:i,
-        file_contents:i===0?filePayload:[]
+        // Backend kotayi agent_index 0'da sayar ve limit asildiysa durdurur. Analizin ilk
+        // istegi artik varsayimlar ajani; kota kontrolu token harcanmadan once yapilsin.
+        agent_index:i===VARSAYIM?0:i+1,
+        file_contents:(i===VARSAYIM||i===0)?filePayload:[]
       });
       if(!r.ok){
         const e=await r.json().catch(()=>({}));
@@ -1001,27 +1029,40 @@ async function startAnalysis(){
     }catch(e){setTile(i,'error',e.message);results[i]='[hata]';throw e;}
   }
 
+  // Her ajan cagrilmadan hemen once promptu guncel sonuclarla yeniden kurulur.
+  const calistir = async i => { await runAgent(i, buildPrompts(curInfo)[i]); updProg(++doneN); };
+  // Varsayimlar ve dogrulama rapora deger katar ama zorunlu degil: basarisiz olurlarsa
+  // analiz durmasin, onlarsiz devam etsin.
+  const istegeBagli = async i => {
+    try { await calistir(i); }
+    catch(e){ results[i]=''; updProg(++doneN); console.warn(AJAN_ADLARI[i]+' atlandı:', e); }
+  };
+
   try{
-    await Promise.all([0,1,2,3,4,5].map(async i=>{await runAgent(i,prompts[i]);updProg(++doneN);}));
-    const p2=buildPrompts(curInfo);
-    await runAgent(6,p2[6]);updProg(++doneN);
-    const p3=buildPrompts(curInfo);
-    await runAgent(7,p3[7]);updProg(++doneN);
-    const p4=buildPrompts(curInfo);
-    await runAgent(8,p4[8]);updProg(++doneN);
-    const p5=buildPrompts(curInfo);
-    await runAgent(9,p5[9]);updProg(++doneN);
-    const p6=buildPrompts(curInfo);
-    await runAgent(10,p6[10]);updProg(++doneN);
-    const p7=buildPrompts(curInfo);
-    await runAgent(11,p7[11]);updProg(12);
+    // Faz 0: ortak varsayimlar. Kota asildiysa burada 429 ile durur.
+    try { await calistir(VARSAYIM); }
+    catch(e){
+      if(/limit/i.test(e.message)) throw e;
+      results[VARSAYIM]=''; updProg(++doneN); console.warn('Varsayımlar atlandı:', e);
+    }
+    // Faz 1: bilgi toplama. E (finansal) pazar ve fiyat ciktisini kullandigi icin sonra calisir.
+    await Promise.all([0,1,2,3,4].map(calistir));
+    await calistir(5);
+    // Faz 2-3: tartisma zinciri (6->7->8->9) ile G (10) birbirinden bagimsiz, paralel.
+    await Promise.all([
+      (async()=>{ for(const i of [6,7,8,9]) await calistir(i); })(),
+      calistir(10),
+    ]);
+    // Faz 4: sentez ve denetim ikisi de 0-10'a bakar, birbirini beklemez.
+    await Promise.all([calistir(11), istegeBagli(DOGRULAMA)]);
+    updProg(TOTAL);
     buildReport();
     await saveAnalysis();
     // Refresh user usage
     await loadUser();
     renderUsageBadge();
     if(kesikBolumler.length){
-      const adlar = kesikBolumler.map(i => (SECS.find(x => x.agentIdx === i) || {}).title || ('Ajan ' + (i+1)));
+      const adlar = kesikBolumler.map(i => (SECS.find(x => x.agentIdx === i) || {}).title || AJAN_ADLARI[i] || ('Ajan ' + (i+1)));
       toast('⚠ ' + kesikBolumler.length + ' bölüm uzunluk sınırına takılıp yarım kaldı: ' + adlar.join(', '), 7000);
     } else {
       toast('✓ Analiz tamamlandı');
@@ -1175,6 +1216,8 @@ async function loadAnalysis(id) {
   if (!entry) { toast('Analiz bulunamadi'); return; }
 
   curInfo = entry.info;
+  // Once sifirla: eski (12 ajanli) kayit acilirken onceki analizin 12-13. ajan ciktilari kalmasin
+  results = Array(TOTAL).fill(''); fullTexts = Array(TOTAL).fill(''); sectionTexts = {};
   for(var i=0;i<entry.results.length;i++) results[i]=entry.results[i];
   for(var i=0;i<(entry.fullTexts||[]).length;i++) fullTexts[i]=entry.fullTexts[i];
   Object.assign(sectionTexts, entry.sectionTexts||{});
@@ -1205,11 +1248,13 @@ async function loadAnalysis(id) {
   if(es) es.style.display='none';
   if(rw) rw.classList.remove('show');
 
-  for(var i=0;i<12;i++){
+  var tamam=0;
+  for(var i=0;i<TOTAL;i++){
     var rv=results[i];
-    if(rv && rv!=='[hata]') setTile(i,'done',rv);
+    if(rv && rv!=='[hata]'){ setTile(i,'done',rv); tamam++; }
+    else setTile(i,'idle');
   }
-  updProg(12);
+  updProg(tamam);
   buildReport();
 
   var wb=document.getElementById('wordBtn');
@@ -1419,7 +1464,7 @@ function buildReport() {
           <div style="font-size:12px;color:var(--text2);line-height:1.8">
             ${new Date().toLocaleString('tr-TR')}<br>
             ${prov}<br>
-            12 Ajan · 3 Faz<br>
+            ${results[VARSAYIM]||results[DOGRULAMA] ? '14 Ajan · Ortak varsayım + denetim' : '12 Ajan · 3 Faz'}<br>
             A-H Bölümleri
           </div>
         </div>
@@ -1427,6 +1472,27 @@ function buildReport() {
       <div style="white-space:pre-wrap;font-size:13px;color:var(--text2);line-height:1.7">${sectionTexts['H']||decision||'Karar bölümü hazırlanıyor...'}</div>
     </div>`;
   container.appendChild(execCard);
+
+  // ── DOĞRULAMA + TEMEL VARSAYIMLAR (15 Eylül 2026 öncesi kayıtlarda yok) ──
+  const ekKart = (rozet, renk, baslik, alt, metin, acik) => {
+    if(!metin || metin==='[hata]') return;
+    const k=document.createElement('div');
+    k.className='scard'+(acik?' open':'');
+    k.innerHTML=`
+      <div class="shead" onclick="this.parentElement.classList.toggle('open')">
+        <div class="sbadge" style="background:${renk};color:#fff;font-size:10px">${rozet}</div>
+        <div class="shead-text"><div class="shead-title">${baslik}</div><div class="shead-sub">${alt}</div></div>
+        <div class="stoggle">▾</div>
+      </div>
+      <div class="sbody">${buildSectionContent(rozet, '', metin)}</div>`;
+    container.appendChild(k);
+  };
+  const guven = ((results[DOGRULAMA]||'').match(/G[ÜU]VEN NOTU\s*\**\s*[:：]\s*\**\s*([^\n]{3,400})/i)||[])[1];
+  ekKart('✓', '#B45309', 'Doğrulama ve Tutarlılık Denetimi',
+    guven ? 'Güven notu: ' + guven.replace(/\*\*/g,'').slice(0,140) : 'Bölümler arası çelişkiler · Aritmetik hatalar · Doğrulanması gereken iddialar',
+    results[DOGRULAMA], true);
+  ekKart('V', '#475569', 'Temel Varsayımlar', 'Tüm bölümlerin kullandığı ortak veri: FOB, konteyner, GTİP, gümrük/KDV, kur',
+    results[VARSAYIM], false);
 
   // ── A-H BÖLÜMLER — TAM İÇERİK ──
   SECS.forEach((s,idx)=>{
