@@ -1075,12 +1075,20 @@ async function startAnalysis(){
 
 // ── REPORT ────────────────────────────────────────────────────────────────────
 // Karar etiketi: puanlama ajani bazen tam kelime yerine "Red"/"Ret" yaziyor.
+// Turkce harfleri ASCII'ye indirger: model "KOŞULLU" yerine "KOŞULLİ" yazdiginda da
+// eslesme tutsun. (2 Kasim 2026: bir analizde kosullu onay "Onayli" olarak etiketlendi.)
+function kararDuzle(s){
+  return (s||'').toLocaleUpperCase('tr-TR')
+    .replace(/[İIı]/g,'I').replace(/Ş/g,'S').replace(/Ğ/g,'G')
+    .replace(/Ü/g,'U').replace(/Ö/g,'O').replace(/Ç/g,'C');
+}
 function kararEtiketi(s){
-  const u = s.toLocaleUpperCase('tr-TR');
-  const tek = w => new RegExp('(?<![A-ZÇĞİÖŞÜ])' + w + '(?![A-ZÇĞİÖŞÜ])').test(u);
+  const u = kararDuzle(s);
+  const tek = w => new RegExp('(?<![A-Z])' + w + '(?![A-Z])').test(u);
   if(/REDDED/.test(u) || tek('RED') || tek('RET')) return {label:'❌ Reddedildi',cls:'v-red',col:'red'};
   if(/ERTELE/.test(u)) return {label:'⏸ Ertelendi',cls:'v-yellow',col:'yellow'};
-  if(/KOŞULLU|KOSULLU/.test(u)) return {label:'⚡ Koşullu Onay',cls:'v-yellow',col:'yellow'};
+  // Kok eslestirme: KOSULLU, KOSULLI, KOSULLU ONAY... hepsi yakalanir. ONAY'dan ONCE bakilir.
+  if(/KOSUL/.test(u)) return {label:'⚡ Koşullu Onay',cls:'v-yellow',col:'yellow'};
   if(/ONAYL/.test(u) || tek('ONAY') || tek('KABUL')) return {label:'✅ Onayli',cls:'v-green',col:'green'};
   return null;
 }
@@ -1092,11 +1100,12 @@ function parseVerdict(t){
     const e = kararEtiketi(satirlar[i][1]);
     if(e) return e;
   }
-  const u=(t||'').toUpperCase();
-  if(u.includes('REDDEDİLDİ')||u.includes('REDDEDILDI'))return{label:'❌ Reddedildi',cls:'v-red',col:'red'};
-  if(u.includes('ERTELENDİ')||u.includes('ERTELENDI'))return{label:'⏸ Ertelendi',cls:'v-yellow',col:'yellow'};
-  if(u.includes('KOŞULLU')||u.includes('KOSULLU'))return{label:'⚡ Koşullu Onay',cls:'v-yellow',col:'yellow'};
-  if(u.includes('ONAYLI')||u.includes('ONAY'))return{label:'✅ Onayli',cls:'v-green',col:'green'};
+  // KARAR: satiri yoksa tum metne bak. Burada da normalize edilmis kok eslestirme kullanilir.
+  const u=kararDuzle(t);
+  if(/REDDEDILDI|REDDED/.test(u))return{label:'❌ Reddedildi',cls:'v-red',col:'red'};
+  if(/ERTELENDI|ERTELE/.test(u))return{label:'⏸ Ertelendi',cls:'v-yellow',col:'yellow'};
+  if(/KOSUL/.test(u))return{label:'⚡ Koşullu Onay',cls:'v-yellow',col:'yellow'};
+  if(/ONAYLI|ONAY/.test(u))return{label:'✅ Onayli',cls:'v-green',col:'green'};
   return{label:'Değerlendirildi',cls:'v-yellow',col:'yellow'};
 }
 function parseScore(t){
